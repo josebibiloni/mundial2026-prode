@@ -396,10 +396,17 @@ function App() {
 
     if (isSupabaseConnected && supabase) {
       try {
+        // 1. Actualizar apodo en la tabla de participantes
         await supabase.from('participants')
           .update({ username: newNick })
           .eq('tenant_id', currentTenant.id)
           .eq('username', oldNick);
+
+        // 2. Actualizar apodo asociado en la tabla de predicciones
+        await supabase.from('predictions')
+          .update({ participant_username: newNick })
+          .eq('tenant_id', currentTenant.id)
+          .eq('participant_username', oldNick);
       } catch (err) {
         console.error(err);
       }
@@ -415,16 +422,20 @@ function App() {
     savedParticipants[currentTenant.id] = updatedList;
     localStorage.setItem('prode_participants', JSON.stringify(savedParticipants));
 
-    // Actualizar localStorage predicciones
+    // Actualizar local/state predicciones
     const oldKey = `${currentTenant.id}_${oldNick}`;
     const newKey = `${currentTenant.id}_${newNick}`;
     const updatedPreds = { ...predictions };
     if (updatedPreds[oldKey]) {
       updatedPreds[newKey] = updatedPreds[oldKey];
       delete updatedPreds[oldKey];
-      localStorage.setItem('prode_predictions', JSON.stringify(updatedPreds));
-      setPredictions(updatedPreds);
     }
+    // Si no existía en state local, crear el slot vacío para el nuevo nick
+    if (!updatedPreds[newKey]) {
+      updatedPreds[newKey] = {};
+    }
+    localStorage.setItem('prode_predictions', JSON.stringify(updatedPreds));
+    setPredictions(updatedPreds);
 
     setCurrentUser({ ...currentUser, username: newNick });
     setNewNickInput('');
