@@ -526,7 +526,7 @@ h1, h2, h3, h4, h5, h6 {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     z-index: 1000;
-    padding: 0.5rem;
+    padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom)) 0.5rem !important;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: space-around;
@@ -541,8 +541,8 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Evitar que el contenido quede oculto debajo de las pestañas */
   .container {
-    padding-bottom: 5.5rem;
-    padding-top: 1rem;
+    padding-bottom: 8.5rem !important;
+    padding-top: 1rem !important;
   }
 
   /* Cabecera compacta fija en móviles */
@@ -550,12 +550,13 @@ h1, h2, h3, h4, h5, h6 {
     position: sticky;
     top: 0;
     z-index: 999;
-    padding: 0.75rem 1rem;
-    background: rgba(10, 15, 29, 0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem 1rem !important;
+    background: rgba(10, 15, 29, 0.9);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     display: flex;
     justify-content: space-between;
+    align-items: center;
   }
 
   .logo-text {
