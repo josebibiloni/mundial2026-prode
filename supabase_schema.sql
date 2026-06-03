@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS participants (
   whatsapp TEXT NOT NULL,          -- Últimos 8 dígitos de Whatsapp (Login ID)
   pin TEXT NOT NULL,               -- PIN de 4 dígitos (Login Password)
   is_admin BOOLEAN DEFAULT false,
+  stripe_color_1 TEXT DEFAULT '#ff0055', -- Color de castigo 1
+  stripe_color_2 TEXT DEFAULT '#00ff87', -- Color de castigo 2
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (tenant_id, username),
   UNIQUE (tenant_id, whatsapp)     -- Whatsapp único por grupo
@@ -82,6 +84,6 @@ INSERT INTO matches (id, team_a, flag_a, team_b, flag_b, group_name, match_date,
 INSERT INTO matches (id, team_a, flag_a, team_b, flag_b, group_name, match_date, stadium) VALUES
 (8, 'Inglaterra', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Corea del Sur', '🇰🇷', 'Grupo G', '15 Jun 2026 - 12:00', 'Lumen Field, Seattle') ON CONFLICT DO NOTHING;
 INSERT INTO matches (id, team_a, flag_a, team_b, flag_b, group_name, match_date, stadium) VALUES
-(9, 'Uruguay', '🇺🇾', 'Marruecos', '🇲🇦', 'Grupo H', '15 Jun 2026 - 19:00', 'Levi''s Stadium, Santa Clara') ON CONFLICT DO NOTHING;
+(9, 'Uruguay', '🇺🇾', 'Marruecos', '🇲🇦', 'Grupo H', '15 Jun 2026 - 19:00', 'Levi\'s Stadium, Santa Clara') ON CONFLICT DO NOTHING;
 INSERT INTO matches (id, team_a, flag_a, team_b, flag_b, group_name, match_date, stadium) VALUES
 (10, 'Alemania', '🇩🇪', 'Colombia', '🇨🇴', 'Grupo I', '16 Jun 2026 - 15:00', 'Gillette Stadium, Boston') ON CONFLICT DO NOTHING;

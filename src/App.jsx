@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initialMatches } from './data/initialMatches';
+import { banterPhrases } from './data/banterPhrases';
 import { supabase } from './lib/supabaseClient';
 
 function App() {
@@ -7,7 +8,7 @@ function App() {
 
   // Sesión y Navegación
   const [currentTenant, setCurrentTenant] = useState(null); // { id, name }
-  const [currentUser, setCurrentUser] = useState(null); // { id, username, fullName, mysticPhrase, whatsapp, isAdmin }
+  const [currentUser, setCurrentUser] = useState(null); // { id, username, fullName, mysticPhrase, whatsapp, isAdmin, stripeColor1, stripeColor2 }
   const [activeTab, setActiveTab] = useState('predictions'); // 'predictions' | 'leaderboard' | 'friends' | 'admin'
   const [selectedFriendId, setSelectedFriendId] = useState(''); // ID del amigo a consultar
   const [comparisonUserId, setComparisonUserId] = useState(''); // ID para comparar resultados reales
@@ -27,8 +28,15 @@ function App() {
 
   // Modales
   const [userProfileModal, setUserProfileModal] = useState(null); // Contiene { username, fullName, mysticPhrase, whatsapp }
-  const [isEditingNick, setIsEditingNick] = useState(false);
-  const [newNickInput, setNewNickInput] = useState('');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editNickInput, setEditNickInput] = useState('');
+  const [editMysticInput, setEditMysticInput] = useState('');
+  const [editColor1Input, setEditColor1Input] = useState('#ff0055');
+  const [editColor2Input, setEditColor2Input] = useState('#00ff87');
+
+  // Popup de Chicanas
+  const [showBanterPopup, setShowBanterPopup] = useState(false);
+  const [banterMessage, setBanterMessage] = useState('');
 
   // Formularios de entrada
   const [newTenantName, setNewTenantName] = useState('');
@@ -61,7 +69,6 @@ function App() {
         if (foundTenant) {
           setCurrentTenant(foundTenant);
         } else {
-          // Si no existe, lo creamos temporalmente en el estado
           const tempTenant = { id: inviteTenantId, name: inviteTenantId.replace(/-/g, ' ').toUpperCase() };
           setCurrentTenant(tempTenant);
         }
@@ -70,7 +77,7 @@ function App() {
     }
   }, [tenants]);
 
-  // Cargar datos de Supabase o LocalStorage
+  // Cargar datos de Supabase
   const fetchInitialData = async () => {
     if (isSupabaseConnected && supabase) {
       try {
@@ -207,6 +214,8 @@ function App() {
         fullName: user.full_name,
         mysticPhrase: user.mystic_phrase,
         whatsapp: user.whatsapp,
+        stripeColor1: user.stripe_color_1,
+        stripeColor2: user.stripe_color_2,
         points: totalPoints,
         exactScores,
         correctOutcomes
@@ -220,27 +229,36 @@ function App() {
     });
   };
 
-  // Generar frases del Top 3 dinámicamente
-  useEffect(() => {
-    if (participants.length >= 3 && matches.some(m => m.status === 'played')) {
-      const board = getLeaderboard();
-      if (board.length >= 3) {
-        const top1 = board[0];
-        const top2 = board[1];
-        const top3 = board[2];
+  const leaderboard = getLeaderboard();
 
-        setDailyMessages({
-          first: `🏆 ¡Alabado sea el supremo líder ${top1.username}! Su Frase Mística lo dice todo: "${top1.mysticPhrase || 'El fútbol es mi vida'}". Con ${top1.points} pts miras al resto desde el Olimpo futbolístico. El mismísimo Scaloni te llamará para armar las tácticas del 2026.`,
-          second: `🥈 Excelente campaña para ${top2.username}. Con ${top2.points} pts estás muy cerca del trono. Demuestras un enorme análisis futbolístico y tienes al líder sintiendo la presión en la nuca. ¡Sigue así!`,
-          third: `🥉 Bueno... felicitaciones a ${top3.username} por raspar el tercer puesto. Con ${top3.points} pts lograste subir al podio, pero no te agrandes: acordate de que sos el último de los mejores. Un paso en falso y te caés al fondo de la tabla. ¡A esforzarse más!`
-        });
-      }
-    } else {
-      setDailyMessages(null);
+  // Buscar si el usuario actual sufre el castigo (mitad inferior)
+  const loggedInRankIndex = leaderboard.findIndex(p => p.id === currentUser?.id);
+  const isInBottomHalf = currentUser && leaderboard.length >= 2 && loggedInRankIndex >= Math.ceil(leaderboard.length / 2);
+  const leaderUser = leaderboard[0] || null;
+
+  // Colores de castigo del Puesto #1
+  const punishmentColor1 = leaderUser?.stripeColor1 || '#ff0055';
+  const punishmentColor2 = leaderUser?.stripeColor2 || '#00ff87';
+
+  // Lógica para disparar popup de chicana
+  const triggerBanterPopup = (user) => {
+    const board = getLeaderboard();
+    const userRankIdx = board.findIndex(p => p.id === user.id);
+    const leader = board[0];
+
+    // Solo si el usuario logueado NO está en el Top 3 y hay al menos un líder
+    if (userRankIdx >= 3 && leader) {
+      const randomIdx = Math.floor(Math.random() * banterPhrases.length);
+      const phrase = banterPhrases[randomIdx];
+      setBanterMessage(`💬 Mensaje de tu líder supremo [${leader.username}]:\n\n"${phrase}"`);
+      setShowBanterPopup(true);
+      setTimeout(() => {
+        setShowBanterPopup(false);
+      }, 3000);
     }
-  }, [predictions, matches, participants]);
+  };
 
-  // Crear nuevo grupo (Tenant)
+  // Crear nuevo grupo
   const handleCreateTenant = async (e) => {
     e.preventDefault();
     if (!newTenantName.trim()) return;
@@ -272,7 +290,6 @@ function App() {
     e.preventDefault();
     if (!newUserName.trim() || !newUserFullName.trim() || !newUserWhatsapp.trim() || !newUserPin.trim() || !currentTenant) return;
 
-    // Validar últimos 8 dígitos de whatsapp y PIN de 4 dígitos
     const cleanWhatsapp = newUserWhatsapp.replace(/\D/g, '').slice(-8);
     const cleanPin = newUserPin.replace(/\D/g, '').slice(-4);
 
@@ -290,7 +307,7 @@ function App() {
       return;
     }
     if (participants.some(p => p.whatsapp === cleanWhatsapp)) {
-      alert('Este número de Whatsapp ya está registrado en este grupo de amigos.');
+      alert('Este número de Whatsapp ya está registrado en este grupo.');
       return;
     }
 
@@ -301,7 +318,9 @@ function App() {
       mystic_phrase: newUserMystic,
       whatsapp: cleanWhatsapp,
       pin: cleanPin,
-      is_admin: isAdminRegister
+      is_admin: isAdminRegister,
+      stripe_color_1: '#ff0055',
+      stripe_color_2: '#00ff87'
     };
 
     if (isSupabaseConnected && supabase) {
@@ -318,16 +337,20 @@ function App() {
           setNewUserPin('');
           setIsAdminRegister(false);
 
-          setCurrentUser({
+          const loggedUser = {
             id: registeredUser.id,
             username: registeredUser.username,
             fullName: registeredUser.full_name,
             mysticPhrase: registeredUser.mystic_phrase,
             whatsapp: registeredUser.whatsapp,
-            isAdmin: registeredUser.is_admin
-          });
-          
+            isAdmin: registeredUser.is_admin,
+            stripeColor1: registeredUser.stripe_color_1,
+            stripeColor2: registeredUser.stripe_color_2
+          };
+
+          setCurrentUser(loggedUser);
           await loadParticipantsForTenant(currentTenant.id);
+          triggerBanterPopup(loggedUser);
           setActiveTab('predictions');
         }
       } catch (err) {
@@ -337,7 +360,7 @@ function App() {
   };
 
   // Iniciar sesión (Whatsapp + PIN)
-  const handleLoginUser = (e) => {
+  const handleLoginUser = async (e) => {
     e.preventDefault();
     if (!loginWhatsapp.trim() || !loginPin.trim() || !currentTenant) return;
 
@@ -346,51 +369,68 @@ function App() {
 
     const found = participants.find(p => p.whatsapp === cleanWhatsapp && p.pin === cleanPin);
     if (!found) {
-      alert('Credenciales incorrectas (Número de Whatsapp o PIN inválidos) para este grupo.');
+      alert('Credenciales incorrectas para este grupo.');
       return;
     }
 
     setLoginWhatsapp('');
     setLoginPin('');
-    setCurrentUser({
+    
+    const loggedUser = {
       id: found.id,
       username: found.username,
       fullName: found.full_name,
       mysticPhrase: found.mystic_phrase,
       whatsapp: found.whatsapp,
-      isAdmin: found.is_admin
-    });
+      isAdmin: found.is_admin,
+      stripeColor1: found.stripe_color_1,
+      stripeColor2: found.stripe_color_2
+    };
+
+    setCurrentUser(loggedUser);
+    triggerBanterPopup(loggedUser);
     setActiveTab('predictions');
   };
 
-  // Editar apodo
-  const handleUpdateNickname = async (e) => {
+  // Editar Perfil Completo (Apodo, Frase Mística y colores de castigo)
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    if (!newNickInput.trim() || !currentUser || !currentTenant) return;
+    if (!editNickInput.trim() || !currentUser || !currentTenant) return;
 
-    const lowerNew = newNickInput.toLowerCase();
+    const lowerNew = editNickInput.toLowerCase();
     if (participants.some(p => p.username.toLowerCase() === lowerNew && p.id !== currentUser.id)) {
       alert('Este apodo ya está en uso por otro participante.');
       return;
     }
 
-    const newNick = newNickInput;
-
     if (isSupabaseConnected && supabase) {
       try {
+        const updates = {
+          username: editNickInput,
+          mystic_phrase: editMysticInput,
+          stripe_color_1: editColor1Input,
+          stripe_color_2: editColor2Input
+        };
+
         const { error } = await supabase.from('participants')
-          .update({ username: newNick })
+          .update(updates)
           .eq('id', currentUser.id);
 
         if (error) throw error;
 
-        setCurrentUser({ ...currentUser, username: newNick });
-        setNewNickInput('');
-        setIsEditingNick(false);
+        setCurrentUser({
+          ...currentUser,
+          username: editNickInput,
+          mysticPhrase: editMysticInput,
+          stripeColor1: editColor1Input,
+          stripeColor2: editColor2Input
+        });
+        
+        setIsEditingProfile(false);
         await loadParticipantsForTenant(currentTenant.id);
-        alert('Apodo actualizado con éxito.');
+        alert('Perfil actualizado con éxito.');
       } catch (err) {
-        alert('Error al actualizar el apodo: ' + err.message);
+        alert('Error al actualizar perfil: ' + err.message);
       }
     }
   };
@@ -433,7 +473,7 @@ function App() {
     }
   };
 
-  // Sincronizar marcadores desde JSON en Internet
+  // Sincronizar marcadores reales
   const handleSyncScores = async () => {
     try {
       const res = await fetch('/api-results.json');
@@ -499,16 +539,6 @@ function App() {
     }
   };
 
-  // Posicionar automáticamente en el primer partido pendiente al iniciar la app
-  useEffect(() => {
-    if (matches && matches.length > 0) {
-      const firstPendingIdx = matches.findIndex(m => m.status === 'scheduled');
-      if (firstPendingIdx !== -1) {
-        setCurrentMatchIndex(firstPendingIdx);
-      }
-    }
-  }, [matches]);
-
   // Generar URL de invitación
   const getInviteLink = () => {
     if (!currentTenant) return '';
@@ -536,10 +566,67 @@ function App() {
     );
   }
 
+  // Estilos inline dinámicos para el castigo de fondo en la mitad inferior
+  const punishmentStyle = isInBottomHalf ? {
+    backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor2))} 40px)`
+  } : {};
+
+  function punnishmentOverlayColor(hex) {
+    return hex + '1A'; // Añadir transparencia de 10% (hex 1A) para que no tape las letras
+  }
+  function punnishmentLighter(color) {
+    return color.startsWith('#') ? color : '#ff0055';
+  }
+
   return (
-    <div>
+    <div style={punnishmentStyle} className={isInBottomHalf ? "castigo-activo" : ""}>
+      
+      {/* CAPA: Marca de agua repetida del Puesto 1 (si está castigado) */}
+      {isInBottomHalf && leaderUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'none',
+          zIndex: 1,
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '3rem',
+          padding: '2rem',
+          overflow: 'hidden',
+          opacity: 0.1,
+          fontSize: '1.5rem',
+          fontWeight: '800',
+          textTransform: 'uppercase',
+          color: '#ffffff',
+          userSelect: 'none'
+        }}>
+          {Array.from({ length: 40 }).map((_, i) => (
+            <span key={i} style={{ transform: 'rotate(-15deg)', whiteSpace: 'nowrap' }}>
+              👑 {leaderUser.username}: "{leaderUser.mysticPhrase || 'SOY EL MEJOR'}"
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* MODAL BANTER POPUP (Chicana de 3 segundos) */}
+      {showBanterPopup && (
+        <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #ffb703', animation: 'float 0.5s ease-out' }}>
+            <span style={{ fontSize: '3.5rem' }}>😜</span>
+            <h2 style={{ marginTop: '1rem', color: '#ffb703' }}>¡ATENCIÓN PERDEDOR!</h2>
+            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.15rem', lineHeight: '1.6', fontWeight: 600, whiteSpace: 'pre-wrap' }}>
+              {banterMessage}
+            </p>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Este mensaje se cerrará solo en segundos...</div>
+          </div>
+        </div>
+      )}
+
       {/* Cabecera */}
-      <header className="app-header">
+      <header className="app-header" style={{ position: 'relative', zIndex: 10 }}>
         <div className="logo-container">
           <span className="logo-icon">🏆</span>
           <div>
@@ -554,8 +641,11 @@ function App() {
               <span className="tenant-tag">{currentTenant.name}</span>
               {currentUser && (
                 <span className="user-badge" style={{ cursor: 'pointer' }} onClick={() => {
-                  setNewNickInput(currentUser.username);
-                  setIsEditingNick(true);
+                  setEditNickInput(currentUser.username);
+                  setEditMysticInput(currentUser.mysticPhrase || '');
+                  setEditColor1Input(currentUser.stripeColor1 || '#ff0055');
+                  setEditColor2Input(currentUser.stripeColor2 || '#00ff87');
+                  setIsEditingProfile(true);
                 }}>
                   👑 <strong>{currentUser.username}</strong>
                 </span>
@@ -590,25 +680,66 @@ function App() {
         </div>
       )}
 
-      {/* MODAL: Modificar Apodo */}
-      {isEditingNick && (
+      {/* MODAL: Modificar Perfil / Setup */}
+      {isEditingProfile && (
         <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1001 }}>
           <div className="glass-card onboarding-card">
-            <h3 style={{ fontSize: '1.3rem', marginBottom: '1rem' }}>Editar mi Apodo</h3>
-            <form onSubmit={handleUpdateNickname}>
+            <h3 style={{ fontSize: '1.3rem', marginBottom: '1.25rem', color: 'var(--accent-color)' }}>⚙️ Editar mi Perfil</h3>
+            <form onSubmit={handleUpdateProfile}>
               <div className="form-group">
-                <label>Nuevo Apodo / Nickname</label>
+                <label>Apodo / Nickname</label>
                 <input
                   type="text"
                   className="form-control"
-                  value={newNickInput}
-                  onChange={(e) => setNewNickInput(e.target.value)}
+                  value={editNickInput}
+                  onChange={(e) => setEditNickInput(e.target.value)}
                   required
                 />
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="form-group">
+                <label>Frase Mística</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editMysticInput}
+                  onChange={(e) => setEditMysticInput(e.target.value)}
+                  placeholder="¡Escribe tu lema!"
+                />
+              </div>
+
+              {/* Mostrar editor de colores de castigo si está en el TOP 3 */}
+              {leaderboard.findIndex(p => p.id === currentUser?.id) < 3 && (
+                <div style={{ background: 'rgba(255, 215, 0, 0.05)', border: '1px solid var(--primary-gold)', padding: '1rem', borderRadius: '8px', marginTop: '1rem', marginBottom: '1rem' }}>
+                  <h4 style={{ color: 'var(--primary-gold)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>🥇 Setup de Castigo para Perdedores</h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                    Como estás en el Top 3, elige los dos colores que verán de fondo (a rayas) los que están en la mitad inferior de la tabla.
+                  </p>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Color 1</label>
+                      <input
+                        type="color"
+                        style={{ height: '40px', width: '100%', cursor: 'pointer', padding: 0 }}
+                        value={editColor1Input}
+                        onChange={(e) => setEditColor1Input(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Color 2</label>
+                      <input
+                        type="color"
+                        style={{ height: '40px', width: '100%', cursor: 'pointer', padding: 0 }}
+                        value={editColor2Input}
+                        onChange={(e) => setEditColor2Input(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn-primary">Guardar</button>
-                <button type="button" className="btn-secondary" onClick={() => setIsEditingNick(false)}>Cancelar</button>
+                <button type="button" className="btn-secondary" onClick={() => setIsEditingProfile(false)}>Cancelar</button>
               </div>
             </form>
           </div>
@@ -616,7 +747,7 @@ function App() {
       )}
 
       {/* Main Container */}
-      <main className="container">
+      <main className="container" style={{ position: 'relative', zIndex: 5 }}>
         
         {/* Paso 1: Selección de Tenant */}
         {!currentTenant && (
@@ -947,7 +1078,7 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {getLeaderboard().map((row, idx) => (
+                      {leaderboard.map((row, idx) => (
                         <tr key={row.id} className="leaderboard-row">
                           <td className="rank-cell">{idx + 1}º</td>
                           <td>
