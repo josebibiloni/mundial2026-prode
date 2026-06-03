@@ -10,6 +10,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null); // { username, fullName, isAdmin }
   const [activeTab, setActiveTab] = useState('predictions'); // 'predictions' | 'leaderboard' | 'friends' | 'admin'
   const [selectedFriend, setSelectedFriend] = useState(''); // Nickname del amigo a consultar
+  const [comparisonUser, setComparisonUser] = useState(''); // Nickname para comparar resultados reales
 
   // Paginación de partidos
   const [selectedGroupFilter, setSelectedGroupFilter] = useState('Todos');
@@ -52,10 +53,36 @@ function App() {
         // Cargar Partidos
         let { data: dbMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
         if (dbMatches && dbMatches.length > 0) {
-          setMatches(dbMatches);
+          const mappedMatches = dbMatches.map(m => ({
+            id: m.id,
+            teamA: m.team_a,
+            flagA: m.flag_a,
+            teamB: m.team_b,
+            flagB: m.flag_b,
+            group: m.group_name,
+            date: m.match_date,
+            stadium: m.stadium,
+            actualScoreA: m.actual_score_a,
+            actualScoreB: m.actual_score_b,
+            status: m.status
+          }));
+          setMatches(mappedMatches);
         } else {
-          // Si la DB está vacía, sembrar iniciales
-          await supabase.from('matches').insert(initialMatches);
+          // Si la DB está vacía, sembrar iniciales mapeando a snake_case para insertar
+          const dbSeed = initialMatches.map(m => ({
+            id: m.id,
+            team_a: m.teamA,
+            flag_a: m.flagA,
+            team_b: m.teamB,
+            flag_b: m.flagB,
+            group_name: m.group,
+            match_date: m.date,
+            stadium: m.stadium,
+            actual_score_a: m.actualScoreA,
+            actual_score_b: m.actualScoreB,
+            status: m.status
+          }));
+          await supabase.from('matches').insert(dbSeed);
           setMatches(initialMatches);
         }
 
@@ -940,7 +967,7 @@ function App() {
                     onChange={(e) => setSelectedFriend(e.target.value)}
                   >
                     <option value="">-- Selecciona un amigo --</option>
-                    {participants.filter(p => p.username !== currentUser.username).map(p => (
+                    {participants.map(p => (
                       <option key={p.username} value={p.username}>{p.username} ({p.full_name || p.fullName || p.username})</option>
                     ))}
                   </select>
@@ -983,22 +1010,90 @@ function App() {
               </div>
             )}
 
-            {/* PESTAÑA: Administrar Resultados / Auto-sincronización */}
-            {activeTab === 'admin' && (
+             {activeTab === 'admin' && (
               <div className="glass-card">
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>⚙️ Sincronizar Resultados Reales del Mundial</h2>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ⚙️ Resultados Oficiales del Mundial
+                </h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                  El sistema puede conectarse a un feed JSON en la web para descargar automáticamente todos los goles y estados de los partidos del mundial.
+                  A continuación se muestran los marcadores de los partidos del mundial. Presiona el botón para sincronizar los resultados en tiempo real desde internet.
                 </p>
 
-                <div className="glass-card mb-4" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                  <h4>Feed de sincronización configurado:</h4>
-                  <code style={{ display: 'block', margin: '0.5rem 0', color: 'var(--accent-color)' }}>
-                    /api-results.json (Simulador local de resultados en vivo)
-                  </code>
-                  <button className="btn-primary" style={{ width: 'auto', marginTop: '1rem' }} onClick={handleSyncScores}>
-                    🔄 Sincronizar con Internet Ahora
+                <div className="glass-card mb-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+                  <div>
+                    <h4 style={{ marginBottom: '0.25rem' }}>Sincronización Automática</h4>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fuente: /api-results.json</span>
+                  </div>
+                  <button className="btn-primary" style={{ width: 'auto' }} onClick={handleSyncScores}>
+                    🔄 Sincronizar Resultados
                   </button>
+                </div>
+
+                {/* Comparador de resultados con un participante */}
+                <div className="form-group" style={{ maxWidth: '350px', marginBottom: '2rem' }}>
+                  <label>Comparar partido real con el pronóstico de:</label>
+                  <select
+                    className="form-control"
+                    value={comparisonUser}
+                    onChange={(e) => setComparisonUser(e.target.value)}
+                  >
+                    <option value="">-- No comparar / Solo ver resultados --</option>
+                    {participants.map(p => (
+                      <option key={p.username} value={p.username}>{p.username} ({p.full_name || p.fullName || p.username})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="matches-grid">
+                  {matches.map(match => {
+                    const isPlayed = match.status === 'played';
+                    
+                    // Obtener pronóstico de la persona seleccionada para comparar
+                    const compKey = `${currentTenant.id}_${comparisonUser}`;
+                    const pred = comparisonUser ? predictions[compKey]?.[match.id] : null;
+                    const ptsEarned = (isPlayed && pred) ? calculatePoints(pred, match) : 0;
+
+                    return (
+                      <div key={match.id} className="glass-card" style={{ borderColor: isPlayed ? 'var(--accent-color)' : 'var(--glass-border)' }}>
+                        <div className="match-header">
+                          <span>{match.group} • {match.date}</span>
+                          <span style={{ color: isPlayed ? 'var(--accent-color)' : 'var(--text-secondary)', fontWeight: 'bold' }}>
+                            {isPlayed ? 'FINALIZADO' : 'PENDIENTE'}
+                          </span>
+                        </div>
+
+                        <div className="match-body" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ flex: 1, textAlign: 'left' }}>{match.flagA} {match.teamA}</span>
+                          
+                          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '1.25rem', fontWeight: 'bold', minWidth: '80px', textAlign: 'center' }}>
+                            {isPlayed ? `${match.actualScoreA} - ${match.actualScoreB}` : 'vs'}
+                          </div>
+
+                          <span style={{ flex: 1, textAlign: 'right' }}>{match.teamB} {match.flagB}</span>
+                        </div>
+
+                        {/* Mostrar comparación si hay un usuario seleccionado */}
+                        {comparisonUser && (
+                          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--glass-border)', fontSize: '0.85rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>Pronóstico de <strong>{comparisonUser}</strong>:</span>
+                              <strong style={{ fontSize: '1rem', color: pred ? 'white' : 'var(--text-secondary)' }}>
+                                {pred ? `${pred.scoreA} - ${pred.scoreB}` : 'Sin cargar'}
+                              </strong>
+                            </div>
+                            {isPlayed && pred && (
+                              <div style={{ marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Puntos sumados:</span>
+                                <span className={`points-pill ${ptsEarned === 7 ? 'perfect' : ptsEarned === 0 ? 'zero' : ''}`}>
+                                  +{ptsEarned} pts
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
