@@ -576,7 +576,7 @@ function App() {
     return hex + '1A'; // Añadir transparencia de 10% (hex 1A) para que no tape las letras
   }
   function punnishmentLighter(color) {
-    return color.startsWith('#') ? color : '#ff0055';
+    return (color && typeof color === 'string' && color.startsWith('#')) ? color : '#ff0055';
   }
 
   return (
