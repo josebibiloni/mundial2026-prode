@@ -185,6 +185,7 @@ function App() {
 
   // Calcular tabla de posiciones
   const getLeaderboard = () => {
+    if (!currentTenant) return [];
     const list = participants;
     const ranked = list.map(user => {
       let totalPoints = 0;
