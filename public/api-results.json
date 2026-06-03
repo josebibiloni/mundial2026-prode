@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "actualScoreA": 3,
+    "actualScoreB": 1,
+    "status": "played"
+  },
+  {
+    "id": 2,
+    "actualScoreA": 2,
+    "actualScoreB": 0,
+    "status": "played"
+  },
+  {
+    "id": 3,
+    "actualScoreA": 1,
+    "actualScoreB": 1,
+    "status": "played"
+  },
+  {
+    "id": 4,
+    "actualScoreA": 2,
+    "actualScoreB": 1,
+    "status": "played"
+  },
+  {
+    "id": 5,
+    "actualScoreA": 0,
+    "actualScoreB": 2,
+    "status": "played"
+  }
+]
