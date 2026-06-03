@@ -710,9 +710,9 @@ function App() {
               {/* Mostrar editor de colores de castigo si está en el TOP 3 */}
               {leaderboard.findIndex(p => p.id === currentUser?.id) < 3 && (
                 <div style={{ background: 'rgba(255, 215, 0, 0.05)', border: '1px solid var(--primary-gold)', padding: '1rem', borderRadius: '8px', marginTop: '1rem', marginBottom: '1rem' }}>
-                  <h4 style={{ color: 'var(--primary-gold)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>🥇 Setup de Castigo para Perdedores</h4>
+                  <h4 style={{ color: 'var(--primary-gold)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>👑 ¡PODER SUPREMO DEL CAMPEÓN!</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                    Como estás en el Top 3, elige los dos colores que verán de fondo (a rayas) los que están en la mitad inferior de la tabla.
+                    Como Campeón (Puesto #1), tienes el poder de castigar a los "Losers" (mitad inferior de la tabla) eligiendo a tu criterio los 2 colores a rayas que verán de fondo. Además, tu Frase Mística se estampará como marca de agua en todos sus dispositivos.
                   </p>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <div className="form-group" style={{ flex: 1 }}>
@@ -1067,6 +1067,11 @@ function App() {
             {activeTab === 'leaderboard' && (
               <div className="glass-card">
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>🏆 Clasificación del Grupo</h2>
+                
+                {/* Cartel de Advertencia de Poderes */}
+                <div style={{ background: 'rgba(255, 77, 77, 0.05)', border: '1px solid rgba(255, 77, 77, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                  📢 <strong>Regla del Campeón</strong>: El líder absoluto (Puesto #1) tiene el poder de castigar visualmente a los "Losers" (mitad inferior de la tabla) personalizando sus colores de fondo a rayas continuas y estampando su Frase Mística de forma permanente en sus pantallas. ¡Haz clic en tu apodo arriba para personalizar!
+                </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table className="leaderboard-table">
                     <thead>
