@@ -580,7 +580,7 @@ function App() {
   }
 
   return (
-    <div style={punnishmentStyle} className={isInBottomHalf ? "castigo-activo" : ""}>
+    <div style={punishmentStyle} className={isInBottomHalf ? "castigo-activo" : ""}>
       
       {/* CAPA: Marca de agua repetida del Puesto 1 (si está castigado) */}
       {isInBottomHalf && leaderUser && (
