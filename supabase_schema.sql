@@ -87,3 +87,15 @@ INSERT INTO matches (id, team_a, flag_a, team_b, flag_b, group_name, match_date,
 (9, 'Uruguay', '🇺🇾', 'Marruecos', '🇲🇦', 'Grupo H', '15 Jun 2026 - 19:00', 'Levi\'s Stadium, Santa Clara') ON CONFLICT DO NOTHING;
 INSERT INTO matches (id, team_a, flag_a, team_b, flag_b, group_name, match_date, stadium) VALUES
 (10, 'Alemania', '🇩🇪', 'Colombia', '🇨🇴', 'Grupo I', '16 Jun 2026 - 15:00', 'Gillette Stadium, Boston') ON CONFLICT DO NOTHING;
+
+-- 6. Tabla de Eventos de Boludeo (Banter/Humillación temporal)
+CREATE TABLE IF NOT EXISTS boludeo_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+  triggered_by_username TEXT NOT NULL,
+  stripe_color_1 TEXT NOT NULL,
+  stripe_color_2 TEXT NOT NULL,
+  mystic_phrase TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

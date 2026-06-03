@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initialMatches } from './data/initialMatches';
 import { banterPhrases } from './data/banterPhrases';
+import { soccerQuotes } from './data/soccerQuotes';
 import { supabase } from './lib/supabaseClient';
 
 function App() {
@@ -37,6 +38,12 @@ function App() {
   // Popup de Chicanas
   const [showBanterPopup, setShowBanterPopup] = useState(false);
   const [banterMessage, setBanterMessage] = useState('');
+
+  // Estado de Boludeo Activo (Efecto de 30 segundos)
+  const [activeBoludeo, setActiveBoludeo] = useState(null); // { triggerer, color1, color2, phrase, message, endedAt }
+  const [showBoludeoPopup, setShowBoludeoPopup] = useState(false);
+  const [boludeoPopupMessage, setBoludeoPopupMessage] = useState('');
+  const [boludeoPopupTriggerer, setBoludeoPopupTriggerer] = useState('');
 
   // Formularios de entrada
   const [newTenantName, setNewTenantName] = useState('');
@@ -76,6 +83,135 @@ function App() {
       }
     }
   }, [tenants]);
+
+  // Monitorear y aplicar Boludeo Activo en tiempo real
+  useEffect(() => {
+    if (!currentTenant || !currentUser || !supabase) return;
+
+    let timer = null;
+
+    const checkLatestBoludeo = async () => {
+      try {
+        // Consultar el último evento de boludeo para este grupo
+        const { data, error } = await supabase
+          .from('boludeo_events')
+          .select('*')
+          .eq('tenant_id', currentTenant.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          // Si la tabla no existe en supabase todavía, fallar en silencio
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const latest = data[0];
+          
+          // No auto-boludearse (si fui yo quien presionó el botón, ya lo sé/no me afecta)
+          if (latest.triggered_by_username === currentUser.username) {
+            return;
+          }
+
+          // Comprobar si ya experimentamos este boludeo específico
+          const lastExp = localStorage.getItem(`last_experienced_boludeo_${currentTenant.id}`);
+          if (lastExp !== latest.created_at) {
+            // Guardar que ya se empezó a experimentar
+            localStorage.setItem(`last_experienced_boludeo_${currentTenant.id}`, latest.created_at);
+
+            // Activar el efecto por 30 segundos
+            setActiveBoludeo({
+              triggerer: latest.triggered_by_username,
+              color1: latest.stripe_color_1,
+              color2: latest.stripe_color_2,
+              phrase: latest.mystic_phrase,
+              message: latest.message,
+              endedAt: Date.now() + 30000
+            });
+
+            // Mostrar el popup por 7 segundos
+            setBoludeoPopupMessage(latest.message);
+            setBoludeoPopupTriggerer(latest.triggered_by_username);
+            setShowBoludeoPopup(true);
+            setTimeout(() => {
+              setShowBoludeoPopup(false);
+            }, 7000);
+
+            // Temporizador para quitar el efecto de fondo y marca de agua a los 30 segundos
+            setTimeout(() => {
+              setActiveBoludeo(null);
+            }, 30000);
+          }
+        }
+      } catch (err) {
+        console.error("Error al chequear boludeos:", err);
+      }
+    };
+
+    // Consultar al inicio
+    checkLatestBoludeo();
+
+    // Polling cada 7 segundos para detectar nuevos botones presionados en tiempo real
+    timer = setInterval(checkLatestBoludeo, 7000);
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [currentTenant, currentUser]);
+
+  // Activar el boludeo del #1 para todos los demás
+  const handleTriggerBoludeo = async () => {
+    if (!currentUser || !currentTenant) return;
+
+    // Elegir frase al azar de las 100 frases futboleras
+    const randomQuote = soccerQuotes[Math.floor(Math.random() * soccerQuotes.length)];
+
+    const newEvent = {
+      tenant_id: currentTenant.id,
+      triggered_by_username: currentUser.username,
+      stripe_color_1: currentUser.stripeColor1 || '#ff0055',
+      stripe_color_2: currentUser.stripeColor2 || '#00ff87',
+      mystic_phrase: currentUser.mysticPhrase || '¡A JUGAR AL FÚTBOL!',
+      message: randomQuote
+    };
+
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { error } = await supabase.from('boludeo_events').insert(newEvent);
+        if (error) {
+          // Si da error porque la tabla no existe, dar instrucciones claras
+          if (error.code === '42P01') {
+            alert('⚠️ La tabla "boludeo_events" no existe en Supabase todavía.\n\nPor favor ejecuta el comando SQL en la consola de Supabase SQL Editor para crearla.');
+          } else {
+            alert('Error al lanzar boludeo: ' + error.message);
+          }
+        } else {
+          // Activar también localmente para que el emisor pueda ver el efecto de inmediato
+          setActiveBoludeo({
+            triggerer: (currentUser?.username || '').trim(),
+            color1: newEvent.stripe_color_1,
+            color2: newEvent.stripe_color_2,
+            phrase: newEvent.mystic_phrase,
+            message: randomQuote,
+            endedAt: Date.now() + 30000
+          });
+
+          setBoludeoPopupMessage(randomQuote);
+          setBoludeoPopupTriggerer((currentUser?.username || '').trim());
+          setShowBoludeoPopup(true);
+          setTimeout(() => {
+            setShowBoludeoPopup(false);
+          }, 7000);
+
+          setTimeout(() => {
+            setActiveBoludeo(null);
+          }, 30000);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
 
   // Cargar datos de Supabase
   const fetchInitialData = async () => {
@@ -124,9 +260,24 @@ function App() {
         let { data: dbPreds } = await supabase.from('predictions').select('*');
         const formattedPreds = {};
         dbPreds?.forEach(p => {
-          const key = `${p.tenant_id}_${p.participant_id}`;
-          if (!formattedPreds[key]) formattedPreds[key] = {};
-          formattedPreds[key][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
+          // Guardar por ID si existe
+          if (p.participant_id) {
+            const keyId = `${p.tenant_id}_${p.participant_id}`;
+            if (!formattedPreds[keyId]) formattedPreds[keyId] = {};
+            formattedPreds[keyId][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
+          }
+          // Guardar por username si existe
+          if (p.participant_username) {
+            const keyUser = `${p.tenant_id}_${(p.participant_username || '').trim()}`;
+            if (!formattedPreds[keyUser]) formattedPreds[keyUser] = {};
+            formattedPreds[keyUser][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
+          }
+          // Fallback por si acaso
+          if (!p.participant_id && !p.participant_username) {
+            const keyUndef = `${p.tenant_id}_undefined`;
+            if (!formattedPreds[keyUndef]) formattedPreds[keyUndef] = {};
+            formattedPreds[keyUndef][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
+          }
         });
         setPredictions(formattedPreds);
 
@@ -146,7 +297,24 @@ function App() {
     if (isSupabaseConnected && supabase) {
       try {
         let { data } = await supabase.from('participants').select('*').eq('tenant_id', tenantId);
-        setParticipants(data || []);
+        const resolvedParticipants = data || [];
+        setParticipants(resolvedParticipants);
+
+        // Mapear predicciones que estaban guardadas por username a su UUID correspondiente en el estado
+        setPredictions(prev => {
+          const next = { ...prev };
+          resolvedParticipants.forEach(user => {
+            const keyUsername = `${tenantId}_${(user.username || '').trim()}`;
+            const keyId = `${tenantId}_${user.id}`;
+            // Normalizar para que existan ambas claves
+            if (next[keyUsername] && !next[keyId]) {
+              next[keyId] = next[keyUsername];
+            } else if (next[keyId] && !next[keyUsername]) {
+              next[keyUsername] = next[keyId];
+            }
+          });
+          return next;
+        });
       } catch (err) {
         console.error(err);
       }
@@ -192,7 +360,7 @@ function App() {
       let exactScores = 0;
       let correctOutcomes = 0;
 
-      const userPreds = predictions[`${currentTenant.id}_${user.id}`] || {};
+      const userPreds = predictions[`${currentTenant.id}_${user.id}`] || predictions[`${currentTenant.id}_${(user.username || '').trim()}`] || {};
 
       matches.forEach(match => {
         if (match.status === 'played') {
@@ -450,26 +618,48 @@ function App() {
       [team]: parsedVal
     };
 
-    if (isSupabaseConnected && supabase) {
+     if (isSupabaseConnected && supabase) {
       try {
-        await supabase.from('predictions').upsert({
+        const predictionRow = {
           tenant_id: currentTenant.id,
-          participant_id: currentUser.id,
           match_id: matchId,
           score_a: team === 'scoreA' ? parsedVal : matchPred.scoreA,
           score_b: team === 'scoreB' ? parsedVal : matchPred.scoreB,
+        };
+
+        // Intentamos primero guardar usando participant_id
+        const { error } = await supabase.from('predictions').upsert({
+          ...predictionRow,
+          participant_id: currentUser.id
         });
+
+        // Si la columna participant_id no existe (código 42703), usamos participant_username
+        if (error && (error.code === '42703' || error.message?.includes('participant_id'))) {
+          await supabase.from('predictions').upsert({
+            ...predictionRow,
+            participant_username: currentUser.username
+          });
+        } else if (error) {
+          throw error;
+        }
+
+        const keyId = `${currentTenant.id}_${currentUser.id}`;
+        const keyUsername = `${currentTenant.id}_${currentUser.username}`;
 
         const updatedPredictions = {
           ...predictions,
-          [key]: {
-            ...userPreds,
+          [keyId]: {
+            ...predictions[keyId],
+            [matchId]: updatedPred
+          },
+          [keyUsername]: {
+            ...predictions[keyUsername],
             [matchId]: updatedPred
           }
         };
         setPredictions(updatedPredictions);
       } catch (err) {
-        console.error(err);
+        console.error("Error al guardar el pronóstico:", err);
       }
     }
   };
@@ -567,8 +757,12 @@ function App() {
     );
   }
 
-  // Estilos inline dinámicos para el castigo de fondo en la mitad inferior
-  const punishmentStyle = isInBottomHalf ? {
+  // Estilos inline dinámicos para el castigo de fondo en la mitad inferior o Boludeo Activo
+  const hasActiveBoludeo = !!activeBoludeo;
+
+  const punishmentStyle = hasActiveBoludeo ? {
+    backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color2))} 40px)`
+  } : isInBottomHalf ? {
     backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor2))} 40px)`
   } : {};
 
@@ -580,10 +774,10 @@ function App() {
   }
 
   return (
-    <div style={punishmentStyle} className={isInBottomHalf ? "castigo-activo" : ""}>
+    <div style={punishmentStyle} className={(isInBottomHalf || hasActiveBoludeo) ? "castigo-activo" : ""}>
       
-      {/* CAPA: Marca de agua repetida del Puesto 1 (si está castigado) */}
-      {isInBottomHalf && leaderUser && (
+      {/* CAPA: Marca de agua repetida del Boludeo Activo o del Puesto 1 si está castigado */}
+      {(hasActiveBoludeo || (isInBottomHalf && leaderUser)) && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -604,11 +798,16 @@ function App() {
           color: '#ffffff',
           userSelect: 'none'
         }}>
-          {Array.from({ length: 40 }).map((_, i) => (
-            <span key={i} style={{ transform: 'rotate(-15deg)', whiteSpace: 'nowrap' }}>
-              👑 {leaderUser.username}: "{leaderUser.mysticPhrase || 'SOY EL MEJOR'}"
-            </span>
-          ))}
+          {Array.from({ length: 40 }).map((_, i) => {
+            const label = hasActiveBoludeo
+              ? `🔥 ${activeBoludeo.triggerer}: "${activeBoludeo.phrase || '¡A JUGAR AL FÚTBOL!'}"`
+              : `👑 ${leaderUser.username}: "${leaderUser.mysticPhrase || 'SOY EL MEJOR'}"`;
+            return (
+              <span key={i} style={{ transform: 'rotate(-15deg)', whiteSpace: 'nowrap' }}>
+                {label}
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -622,6 +821,21 @@ function App() {
               {banterMessage}
             </p>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Este mensaje se cerrará solo en segundos...</div>
+          </div>
+        </div>
+      )}      {/* MODAL BOLUDEO POPUP (Chicana de botón Test Boludeo) */}
+      {showBoludeoPopup && (
+        <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #ff4d4d', animation: 'float 0.5s ease-out' }}>
+            <span style={{ fontSize: '3.5rem' }}>🔥</span>
+            <h2 style={{ marginTop: '1rem', color: '#ff4d4d' }}>🚨 ¡TE ESTÁN BOLUDEANDO! 🚨</h2>
+            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', marginTop: '0.5rem' }}>
+              De: {boludeoPopupTriggerer}
+            </h4>
+            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.25rem', lineHeight: '1.6', fontWeight: 700, whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
+              "{boludeoPopupMessage}"
+            </p>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Esta chicana terminará en unos segundos...</div>
           </div>
         </div>
       )}
@@ -641,15 +855,39 @@ function App() {
             <>
               <span className="tenant-tag">{currentTenant.name}</span>
               {currentUser && (
-                <span className="user-badge" style={{ cursor: 'pointer' }} onClick={() => {
-                  setEditNickInput(currentUser.username);
-                  setEditMysticInput(currentUser.mysticPhrase || '');
-                  setEditColor1Input(currentUser.stripeColor1 || '#ff0055');
-                  setEditColor2Input(currentUser.stripeColor2 || '#00ff87');
-                  setIsEditingProfile(true);
-                }}>
-                  👑 <strong>{currentUser.username}</strong>
-                </span>
+                <>
+                  <span className="user-badge" style={{ cursor: 'pointer' }} onClick={() => {
+                    setEditNickInput(currentUser.username);
+                    setEditMysticInput(currentUser.mysticPhrase || '');
+                    setEditColor1Input(currentUser.stripeColor1 || '#ff0055');
+                    setEditColor2Input(currentUser.stripeColor2 || '#00ff87');
+                    setIsEditingProfile(true);
+                  }}>
+                    👑 <strong>{currentUser.username}</strong>
+                  </span>
+
+                  <button
+                    className="btn-primary animate-pulse"
+                    onClick={handleTriggerBoludeo}
+                    style={{
+                      padding: '0.4rem 0.8rem',
+                      fontSize: '0.8rem',
+                      background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)',
+                      border: 'none',
+                      borderRadius: '20px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 10px rgba(255, 77, 77, 0.3)',
+                      transition: 'transform 0.2s',
+                      whiteSpace: 'nowrap',
+                      marginRight: '0.5rem'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    🔥 Test Boludeo del #1
+                  </button>
+                </>
               )}
             </>
           )}
@@ -925,6 +1163,45 @@ function App() {
               </div>
             )}
 
+            {/* Banner de Test Boludeo */}
+            <div className="glass-card mb-4" style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              background: 'linear-gradient(135deg, rgba(255, 77, 77, 0.08), rgba(241, 168, 10, 0.08))', 
+              border: '1px solid rgba(255, 77, 77, 0.3)',
+              padding: '1.25rem',
+              borderRadius: '12px',
+              gap: '1rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ flex: '1 1 250px' }}>
+                <h4 style={{ color: '#ffb703', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🔥 Test Boludeo del #1
+                </h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                  Presiona el botón para chicanear e incomodar a todos tus amigos durante 30 segundos (¡también verás el efecto tú mismo!).
+                </p>
+              </div>
+              <button 
+                className="btn-primary" 
+                onClick={handleTriggerBoludeo} 
+                style={{ 
+                  width: 'auto', 
+                  minWidth: '130px',
+                  background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)', 
+                  border: 'none',
+                  boxShadow: '0 4px 12px rgba(255, 77, 77, 0.4)',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem',
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '8px'
+                }}
+              >
+                💥 ¡BOLUDEAR!
+              </button>
+            </div>
+
             {/* Menu Tabs */}
             <nav className="tabs-navigation">
               <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => setActiveTab('predictions')}>
@@ -1134,9 +1411,11 @@ function App() {
                       Pronósticos de: {participants.find(p => p.id === selectedFriendId)?.username}
                     </h3>
                     <div className="matches-grid">
-                      {matches.map(m => {
-                        const friendKey = `${currentTenant.id}_${selectedFriendId}`;
-                        const pred = predictions[friendKey]?.[m.id];
+                       {matches.map(m => {
+                        const friend = participants.find(p => p.id === selectedFriendId);
+                        const friendKeyId = `${currentTenant.id}_${selectedFriendId}`;
+                        const friendKeyUsername = friend ? `${currentTenant.id}_${(friend.username || '').trim()}` : '';
+                        const pred = predictions[friendKeyId]?.[m.id] || predictions[friendKeyUsername]?.[m.id];
                         const isPlayed = m.status === 'played';
                         const pts = isPlayed ? calculatePoints(pred, m) : 0;
 
@@ -1233,8 +1512,10 @@ function App() {
                     const isPlayed = match.status === 'played';
                     
                     // Obtener pronóstico de la persona seleccionada para comparar
-                    const compKey = `${currentTenant.id}_${comparisonUserId}`;
-                    const pred = comparisonUserId ? predictions[compKey]?.[match.id] : null;
+                    const compUser = participants.find(p => p.id === comparisonUserId);
+                    const compKeyId = `${currentTenant.id}_${comparisonUserId}`;
+                    const compKeyUsername = compUser ? `${currentTenant.id}_${(compUser.username || '').trim()}` : '';
+                    const pred = comparisonUserId ? (predictions[compKeyId]?.[match.id] || predictions[compKeyUsername]?.[match.id]) : null;
                     const ptsEarned = (isPlayed && pred) ? calculatePoints(pred, match) : 0;
 
                     return (
