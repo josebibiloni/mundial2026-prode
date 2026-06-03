@@ -866,27 +866,6 @@ function App() {
                     👑 <strong>{currentUser.username}</strong>
                   </span>
 
-                  <button
-                    className="btn-primary animate-pulse"
-                    onClick={handleTriggerBoludeo}
-                    style={{
-                      padding: '0.4rem 0.8rem',
-                      fontSize: '0.8rem',
-                      background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)',
-                      border: 'none',
-                      borderRadius: '20px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      boxShadow: '0 4px 10px rgba(255, 77, 77, 0.3)',
-                      transition: 'transform 0.2s',
-                      whiteSpace: 'nowrap',
-                      marginRight: '0.5rem'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    🔥 Test Boludeo del #1
-                  </button>
                 </>
               )}
             </>
