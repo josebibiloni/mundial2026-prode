@@ -7,10 +7,10 @@ function App() {
 
   // Sesión y Navegación
   const [currentTenant, setCurrentTenant] = useState(null); // { id, name }
-  const [currentUser, setCurrentUser] = useState(null); // { username, fullName, isAdmin }
+  const [currentUser, setCurrentUser] = useState(null); // { id, username, fullName, mysticPhrase, whatsapp, isAdmin }
   const [activeTab, setActiveTab] = useState('predictions'); // 'predictions' | 'leaderboard' | 'friends' | 'admin'
-  const [selectedFriend, setSelectedFriend] = useState(''); // Nickname del amigo a consultar
-  const [comparisonUser, setComparisonUser] = useState(''); // Nickname para comparar resultados reales
+  const [selectedFriendId, setSelectedFriendId] = useState(''); // ID del amigo a consultar
+  const [comparisonUserId, setComparisonUserId] = useState(''); // ID para comparar resultados reales
 
   // Paginación de partidos
   const [selectedGroupFilter, setSelectedGroupFilter] = useState('Todos');
@@ -19,28 +19,56 @@ function App() {
   // Datos
   const [tenants, setTenants] = useState([]);
   const [matches, setMatches] = useState([]);
-  const [participants, setParticipants] = useState([]); // List de participantes del tenant activo
-  const [predictions, setPredictions] = useState({}); // key: `${tenantId}_${username}`, value: { matchId: { scoreA, scoreB } }
+  const [participants, setParticipants] = useState([]); // Participantes del grupo
+  const [predictions, setPredictions] = useState({}); // key: `${tenantId}_${participantId}`, value: { matchId: { scoreA, scoreB } }
   
   // Mensajes de humor del Top 3
   const [dailyMessages, setDailyMessages] = useState(null);
 
   // Modales
-  const [userProfileModal, setUserProfileModal] = useState(null); // Contiene { username, fullName } a mostrar en modal
+  const [userProfileModal, setUserProfileModal] = useState(null); // Contiene { username, fullName, mysticPhrase, whatsapp }
   const [isEditingNick, setIsEditingNick] = useState(false);
   const [newNickInput, setNewNickInput] = useState('');
 
-  // Formularios
+  // Formularios de entrada
   const [newTenantName, setNewTenantName] = useState('');
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserFullName, setNewUserFullName] = useState('');
+  
+  // Registro
+  const [newUserName, setNewUserName] = useState(''); // Apodo
+  const [newUserFullName, setNewUserFullName] = useState(''); // Nombre completo
+  const [newUserMystic, setNewUserMystic] = useState(''); // Frase mística
+  const [newUserWhatsapp, setNewUserWhatsapp] = useState(''); // Whatsapp (8 digitos)
+  const [newUserPin, setNewUserPin] = useState(''); // PIN (4 digitos)
   const [isAdminRegister, setIsAdminRegister] = useState(false);
-  const [loginUserName, setLoginUserName] = useState('');
+
+  // Login
+  const [loginWhatsapp, setLoginWhatsapp] = useState(''); // Whatsapp (8 digitos)
+  const [loginPin, setLoginPin] = useState(''); // PIN (4 digitos)
 
   // Carga inicial y listeners de DB
   useEffect(() => {
     fetchInitialData();
-  }, [isSupabaseConnected]);
+  }, []);
+
+  // Escuchar enlaces de invitación por URL (?invite=true&tenant=caseros2026)
+  useEffect(() => {
+    if (tenants.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const isInvite = params.get('invite') === 'true';
+      const inviteTenantId = params.get('tenant');
+      if (isInvite && inviteTenantId) {
+        const foundTenant = tenants.find(t => t.id === inviteTenantId);
+        if (foundTenant) {
+          setCurrentTenant(foundTenant);
+        } else {
+          // Si no existe, lo creamos temporalmente en el estado
+          const tempTenant = { id: inviteTenantId, name: inviteTenantId.replace(/-/g, ' ').toUpperCase() };
+          setCurrentTenant(tempTenant);
+        }
+        setCurrentUser(null);
+      }
+    }
+  }, [tenants]);
 
   // Cargar datos de Supabase o LocalStorage
   const fetchInitialData = async () => {
@@ -68,7 +96,6 @@ function App() {
           }));
           setMatches(mappedMatches);
         } else {
-          // Si la DB está vacía, sembrar iniciales mapeando a snake_case para insertar
           const dbSeed = initialMatches.map(m => ({
             id: m.id,
             team_a: m.teamA,
@@ -90,92 +117,15 @@ function App() {
         let { data: dbPreds } = await supabase.from('predictions').select('*');
         const formattedPreds = {};
         dbPreds?.forEach(p => {
-          const key = `${p.tenant_id}_${p.participant_username}`;
+          const key = `${p.tenant_id}_${p.participant_id}`;
           if (!formattedPreds[key]) formattedPreds[key] = {};
           formattedPreds[key][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
         });
         setPredictions(formattedPreds);
 
       } catch (err) {
-        console.error("Error al cargar desde Supabase, recurriendo a localStorage:", err);
-        fallbackToLocalStorage();
+        console.error("Error al conectar con Supabase:", err);
       }
-    } else {
-      fallbackToLocalStorage();
-    }
-  };
-
-  const fallbackToLocalStorage = () => {
-    // Tenants
-    const savedTenants = localStorage.getItem('prode_tenants');
-    const defaultTenants = [
-      { id: 'oficina-tech', name: 'Oficina Tech' },
-      { id: 'amigos-fc', name: 'Amigos FC' }
-    ];
-    if (savedTenants) {
-      setTenants(JSON.parse(savedTenants));
-    } else {
-      localStorage.setItem('prode_tenants', JSON.stringify(defaultTenants));
-      setTenants(defaultTenants);
-    }
-
-    // Partidos
-    const savedMatches = localStorage.getItem('prode_matches');
-    if (savedMatches) {
-      setMatches(JSON.parse(savedMatches));
-    } else {
-      const demoMatches = [...initialMatches];
-      demoMatches[0].actualScoreA = 2;
-      demoMatches[0].actualScoreB = 1;
-      demoMatches[0].status = 'played';
-
-      demoMatches[1].actualScoreA = 1;
-      demoMatches[1].actualScoreB = 1;
-      demoMatches[1].status = 'played';
-
-      localStorage.setItem('prode_matches', JSON.stringify(demoMatches));
-      setMatches(demoMatches);
-    }
-
-    // Pronósticos
-    const savedPredictions = localStorage.getItem('prode_predictions');
-    if (savedPredictions) {
-      setPredictions(JSON.parse(savedPredictions));
-    } else {
-      const defaultPredictions = {
-        'oficina-tech_Juan10': {
-          1: { scoreA: 2, scoreB: 1 },
-          2: { scoreA: 2, scoreB: 1 },
-          3: { scoreA: 1, scoreB: 0 }
-        },
-        'oficina-tech_Anita': {
-          1: { scoreA: 1, scoreB: 1 },
-          2: { scoreA: 1, scoreB: 1 },
-          3: { scoreA: 2, scoreB: 2 }
-        },
-        'oficina-tech_CarlosG': {
-          1: { scoreA: 3, scoreB: 2 },
-          2: { scoreA: 0, scoreB: 0 }
-        }
-      };
-      localStorage.setItem('prode_predictions', JSON.stringify(defaultPredictions));
-      setPredictions(defaultPredictions);
-    }
-
-    // Participantes locales
-    const savedParticipants = localStorage.getItem('prode_participants');
-    if (!savedParticipants) {
-      const defaultParticipants = {
-        'oficina-tech': [
-          { username: 'Juan10', fullName: 'Juan Pérez', isAdmin: true },
-          { username: 'Anita', fullName: 'Ana Sosa', isAdmin: false },
-          { username: 'CarlosG', fullName: 'Carlos González', isAdmin: false }
-        ],
-        'amigos-fc': [
-          { username: 'Gaby88', fullName: 'Gabriel Méndez', isAdmin: true }
-        ]
-      };
-      localStorage.setItem('prode_participants', JSON.stringify(defaultParticipants));
     }
   };
 
@@ -183,7 +133,7 @@ function App() {
   useEffect(() => {
     if (!currentTenant) return;
     loadParticipantsForTenant(currentTenant.id);
-  }, [currentTenant, isSupabaseConnected]);
+  }, [currentTenant]);
 
   const loadParticipantsForTenant = async (tenantId) => {
     if (isSupabaseConnected && supabase) {
@@ -234,7 +184,7 @@ function App() {
       let exactScores = 0;
       let correctOutcomes = 0;
 
-      const userPreds = predictions[`${currentTenant.id}_${user.username}`] || {};
+      const userPreds = predictions[`${currentTenant.id}_${user.id}`] || {};
 
       matches.forEach(match => {
         if (match.status === 'played') {
@@ -252,8 +202,11 @@ function App() {
       });
 
       return {
+        id: user.id,
         username: user.username,
-        fullName: user.full_name || user.fullName || user.username,
+        fullName: user.full_name,
+        mysticPhrase: user.mystic_phrase,
+        whatsapp: user.whatsapp,
         points: totalPoints,
         exactScores,
         correctOutcomes
@@ -277,7 +230,7 @@ function App() {
         const top3 = board[2];
 
         setDailyMessages({
-          first: `🏆 ¡Alabado sea el supremo líder ${top1.username}! Tu espectacular conocimiento del deporte rey nos deja sin palabras. Con ${top1.points} pts miras al resto desde el Olimpo futbolístico. El mismísimo Scaloni te llamará para armar las tácticas del 2026.`,
+          first: `🏆 ¡Alabado sea el supremo líder ${top1.username}! Su Frase Mística lo dice todo: "${top1.mysticPhrase || 'El fútbol es mi vida'}". Con ${top1.points} pts miras al resto desde el Olimpo futbolístico. El mismísimo Scaloni te llamará para armar las tácticas del 2026.`,
           second: `🥈 Excelente campaña para ${top2.username}. Con ${top2.points} pts estás muy cerca del trono. Demuestras un enorme análisis futbolístico y tienes al líder sintiendo la presión en la nuca. ¡Sigue así!`,
           third: `🥉 Bueno... felicitaciones a ${top3.username} por raspar el tercer puesto. Con ${top3.points} pts lograste subir al podio, pero no te agrandes: acordate de que sos el último de los mejores. Un paso en falso y te caés al fondo de la tabla. ¡A esforzarse más!`
         });
@@ -310,13 +263,6 @@ function App() {
 
     const updatedTenants = [...tenants, newTenant];
     setTenants(updatedTenants);
-    localStorage.setItem('prode_tenants', JSON.stringify(updatedTenants));
-
-    // Inicializar participantes locales
-    const savedParticipants = JSON.parse(localStorage.getItem('prode_participants') || '{}');
-    savedParticipants[id] = [];
-    localStorage.setItem('prode_participants', JSON.stringify(savedParticipants));
-
     setNewTenantName('');
     setCurrentTenant(newTenant);
   };
@@ -324,10 +270,27 @@ function App() {
   // Registrar nuevo participante
   const handleRegisterUser = async (e) => {
     e.preventDefault();
-    if (!newUserName.trim() || !newUserFullName.trim() || !currentTenant) return;
+    if (!newUserName.trim() || !newUserFullName.trim() || !newUserWhatsapp.trim() || !newUserPin.trim() || !currentTenant) return;
+
+    // Validar últimos 8 dígitos de whatsapp y PIN de 4 dígitos
+    const cleanWhatsapp = newUserWhatsapp.replace(/\D/g, '').slice(-8);
+    const cleanPin = newUserPin.replace(/\D/g, '').slice(-4);
+
+    if (cleanWhatsapp.length !== 8) {
+      alert('El número de Whatsapp debe tener al menos 8 dígitos numéricos (se guardarán los últimos 8).');
+      return;
+    }
+    if (cleanPin.length !== 4) {
+      alert('El PIN debe tener exactamente 4 dígitos numéricos.');
+      return;
+    }
 
     if (participants.some(p => p.username.toLowerCase() === newUserName.toLowerCase())) {
       alert('Este Apodo (Nickname) ya está registrado en este grupo.');
+      return;
+    }
+    if (participants.some(p => p.whatsapp === cleanWhatsapp)) {
+      alert('Este número de Whatsapp ya está registrado en este grupo de amigos.');
       return;
     }
 
@@ -335,47 +298,67 @@ function App() {
       tenant_id: currentTenant.id,
       username: newUserName,
       full_name: newUserFullName,
+      mystic_phrase: newUserMystic,
+      whatsapp: cleanWhatsapp,
+      pin: cleanPin,
       is_admin: isAdminRegister
     };
 
     if (isSupabaseConnected && supabase) {
       try {
-        await supabase.from('participants').insert(newUser);
+        const { data, error } = await supabase.from('participants').insert(newUser).select();
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const registeredUser = data[0];
+          setNewUserName('');
+          setNewUserFullName('');
+          setNewUserMystic('');
+          setNewUserWhatsapp('');
+          setNewUserPin('');
+          setIsAdminRegister(false);
+
+          setCurrentUser({
+            id: registeredUser.id,
+            username: registeredUser.username,
+            fullName: registeredUser.full_name,
+            mysticPhrase: registeredUser.mystic_phrase,
+            whatsapp: registeredUser.whatsapp,
+            isAdmin: registeredUser.is_admin
+          });
+          
+          await loadParticipantsForTenant(currentTenant.id);
+          setActiveTab('predictions');
+        }
       } catch (err) {
-        console.error(err);
+        alert('Error en el registro: ' + err.message);
       }
     }
-
-    // Guardado local
-    const savedParticipants = JSON.parse(localStorage.getItem('prode_participants') || '{}');
-    const localUser = { username: newUserName, fullName: newUserFullName, isAdmin: isAdminRegister };
-    savedParticipants[currentTenant.id] = [...(savedParticipants[currentTenant.id] || []), localUser];
-    localStorage.setItem('prode_participants', JSON.stringify(savedParticipants));
-
-    setNewUserName('');
-    setNewUserFullName('');
-    setIsAdminRegister(false);
-    setCurrentUser(localUser);
-    loadParticipantsForTenant(currentTenant.id);
-    setActiveTab('predictions');
   };
 
-  // Iniciar sesión
+  // Iniciar sesión (Whatsapp + PIN)
   const handleLoginUser = (e) => {
     e.preventDefault();
-    if (!loginUserName.trim() || !currentTenant) return;
+    if (!loginWhatsapp.trim() || !loginPin.trim() || !currentTenant) return;
 
-    const found = participants.find(p => p.username.toLowerCase() === loginUserName.toLowerCase());
+    const cleanWhatsapp = loginWhatsapp.replace(/\D/g, '').slice(-8);
+    const cleanPin = loginPin.replace(/\D/g, '').slice(-4);
+
+    const found = participants.find(p => p.whatsapp === cleanWhatsapp && p.pin === cleanPin);
     if (!found) {
-      alert('Apodo no encontrado en este grupo.');
+      alert('Credenciales incorrectas (Número de Whatsapp o PIN inválidos) para este grupo.');
       return;
     }
 
-    setLoginUserName('');
+    setLoginWhatsapp('');
+    setLoginPin('');
     setCurrentUser({
+      id: found.id,
       username: found.username,
-      fullName: found.full_name || found.fullName,
-      isAdmin: found.is_admin || found.isAdmin
+      fullName: found.full_name,
+      mysticPhrase: found.mystic_phrase,
+      whatsapp: found.whatsapp,
+      isAdmin: found.is_admin
     });
     setActiveTab('predictions');
   };
@@ -386,70 +369,38 @@ function App() {
     if (!newNickInput.trim() || !currentUser || !currentTenant) return;
 
     const lowerNew = newNickInput.toLowerCase();
-    if (participants.some(p => p.username.toLowerCase() === lowerNew && p.username !== currentUser.username)) {
+    if (participants.some(p => p.username.toLowerCase() === lowerNew && p.id !== currentUser.id)) {
       alert('Este apodo ya está en uso por otro participante.');
       return;
     }
 
-    const oldNick = currentUser.username;
     const newNick = newNickInput;
 
     if (isSupabaseConnected && supabase) {
       try {
-        // 1. Actualizar apodo en la tabla de participantes
-        await supabase.from('participants')
+        const { error } = await supabase.from('participants')
           .update({ username: newNick })
-          .eq('tenant_id', currentTenant.id)
-          .eq('username', oldNick);
+          .eq('id', currentUser.id);
 
-        // 2. Actualizar apodo asociado en la tabla de predicciones
-        await supabase.from('predictions')
-          .update({ participant_username: newNick })
-          .eq('tenant_id', currentTenant.id)
-          .eq('participant_username', oldNick);
+        if (error) throw error;
+
+        setCurrentUser({ ...currentUser, username: newNick });
+        setNewNickInput('');
+        setIsEditingNick(false);
+        await loadParticipantsForTenant(currentTenant.id);
+        alert('Apodo actualizado con éxito.');
       } catch (err) {
-        console.error(err);
+        alert('Error al actualizar el apodo: ' + err.message);
       }
     }
-
-    // Actualizar localStorage participantes
-    const savedParticipants = JSON.parse(localStorage.getItem('prode_participants') || '{}');
-    const list = savedParticipants[currentTenant.id] || [];
-    const updatedList = list.map(p => {
-      if (p.username === oldNick) return { ...p, username: newNick };
-      return p;
-    });
-    savedParticipants[currentTenant.id] = updatedList;
-    localStorage.setItem('prode_participants', JSON.stringify(savedParticipants));
-
-    // Actualizar local/state predicciones
-    const oldKey = `${currentTenant.id}_${oldNick}`;
-    const newKey = `${currentTenant.id}_${newNick}`;
-    const updatedPreds = { ...predictions };
-    if (updatedPreds[oldKey]) {
-      updatedPreds[newKey] = updatedPreds[oldKey];
-      delete updatedPreds[oldKey];
-    }
-    // Si no existía en state local, crear el slot vacío para el nuevo nick
-    if (!updatedPreds[newKey]) {
-      updatedPreds[newKey] = {};
-    }
-    localStorage.setItem('prode_predictions', JSON.stringify(updatedPreds));
-    setPredictions(updatedPreds);
-
-    setCurrentUser({ ...currentUser, username: newNick });
-    setNewNickInput('');
-    setIsEditingNick(false);
-    loadParticipantsForTenant(currentTenant.id);
-    alert('Apodo actualizado con éxito.');
   };
 
-  // Guardar pronóstico individual
+  // Guardar pronóstico individual (vinculado por ID del participante)
   const handlePredictionChange = async (matchId, team, value) => {
     if (!currentUser || !currentTenant) return;
 
     const parsedVal = value === '' ? '' : Math.max(0, parseInt(value) || 0);
-    const key = `${currentTenant.id}_${currentUser.username}`;
+    const key = `${currentTenant.id}_${currentUser.id}`;
     const userPreds = predictions[key] || {};
     const matchPred = userPreds[matchId] || { scoreA: '', scoreB: '' };
 
@@ -462,26 +413,24 @@ function App() {
       try {
         await supabase.from('predictions').upsert({
           tenant_id: currentTenant.id,
-          participant_username: currentUser.username,
+          participant_id: currentUser.id,
           match_id: matchId,
           score_a: team === 'scoreA' ? parsedVal : matchPred.scoreA,
           score_b: team === 'scoreB' ? parsedVal : matchPred.scoreB,
         });
+
+        const updatedPredictions = {
+          ...predictions,
+          [key]: {
+            ...userPreds,
+            [matchId]: updatedPred
+          }
+        };
+        setPredictions(updatedPredictions);
       } catch (err) {
         console.error(err);
       }
     }
-
-    const updatedPredictions = {
-      ...predictions,
-      [key]: {
-        ...userPreds,
-        [matchId]: updatedPred
-      }
-    };
-
-    setPredictions(updatedPredictions);
-    localStorage.setItem('prode_predictions', JSON.stringify(updatedPredictions));
   };
 
   // Sincronizar marcadores desde JSON en Internet
@@ -517,7 +466,6 @@ function App() {
       }
 
       setMatches(updatedMatches);
-      localStorage.setItem('prode_matches', JSON.stringify(updatedMatches));
       alert('¡Resultados sincronizados de forma automática con éxito!');
     } catch (err) {
       alert('Error en la sincronización: ' + err.message);
@@ -560,6 +508,12 @@ function App() {
       }
     }
   }, [matches]);
+
+  // Generar URL de invitación
+  const getInviteLink = () => {
+    if (!currentTenant) return '';
+    return `${window.location.origin}${window.location.pathname}?invite=true&tenant=${currentTenant.id}`;
+  };
 
   if (!supabase) {
     return (
@@ -611,18 +565,25 @@ function App() {
         </div>
       </header>
 
-      {/* MODAL: Revelar Nombre Verdadero */}
+      {/* MODAL: Detalles del perfil */}
       {userProfileModal && (
         <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1001 }}>
           <div className="glass-card onboarding-card text-center">
-            <span style={{ fontSize: '3rem' }}>👤</span>
-            <h3 style={{ fontSize: '1.5rem', marginTop: '1rem' }}>Detalles del Participante</h3>
-            <div style={{ margin: '1.5rem 0' }}>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Apodo / Nickname</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-color)', marginBottom: '1rem' }}>{userProfileModal.username}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Nombre Real</div>
-              <div style={{ fontSize: '1.3rem', fontWeight: '600' }}>{userProfileModal.fullName}</div>
+            <span style={{ fontSize: '3rem' }}>🔮</span>
+            <h3 style={{ fontSize: '1.5rem', marginTop: '1rem' }}>Ficha del Participante</h3>
+            <div style={{ margin: '1.5rem 0', textAlign: 'left' }}>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Apodo</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent-color)' }}>{userProfileModal.username}</div>
+              </div>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Nombre Real</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{userProfileModal.fullName}</div>
+              </div>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Frase Mística</div>
+                <div style={{ fontSize: '1.05rem', fontStyle: 'italic', color: '#ffb703' }}>"{userProfileModal.mysticPhrase || 'El silencio es mi estrategia'}"</div>
+              </div>
             </div>
             <button className="btn-primary" onClick={() => setUserProfileModal(null)}>Cerrar</button>
           </div>
@@ -706,25 +667,38 @@ function App() {
         {currentTenant && !currentUser && (
           <div className="onboarding-wrapper">
             <div className="glass-card onboarding-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 style={{ fontSize: '1.75rem' }}>{currentTenant.name}</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}>🏆 {currentTenant.name}</h2>
                 <button className="btn-secondary" style={{ width: 'auto', padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => setCurrentTenant(null)}>&larr; Salir</button>
               </div>
 
               {/* Login */}
               <form onSubmit={handleLoginUser} style={{ marginBottom: '2rem' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Iniciar Sesión (Apodo)</h3>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Entrar al Juego</h3>
                 <div className="form-group">
+                  <label>Nro. de WhatsApp (Últimos 8 números)</label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Escribe tu apodo registrado..."
-                    value={loginUserName}
-                    onChange={(e) => setLoginUserName(e.target.value)}
+                    placeholder="Ej. 11223344"
+                    value={loginWhatsapp}
+                    onChange={(e) => setLoginWhatsapp(e.target.value)}
                     required
                   />
                 </div>
-                <button type="submit" className="btn-secondary">Entrar</button>
+                <div className="form-group">
+                  <label>PIN de Acceso (4 dígitos)</label>
+                  <input
+                    type="password"
+                    maxLength="4"
+                    className="form-control"
+                    placeholder="🔑 ****"
+                    value={loginPin}
+                    onChange={(e) => setLoginPin(e.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn-secondary">Iniciar Sesión</button>
               </form>
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '1.5rem 0' }} />
@@ -744,13 +718,46 @@ function App() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Apodo / Nickname único</label>
+                  <label>Apodo / Nickname público</label>
                   <input
                     type="text"
                     className="form-control"
                     placeholder="Ej. Juani10"
                     value={newUserName}
                     onChange={(e) => setNewUserName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Frase Mística / Inspiradora</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Ej. ¡Elijo creer!"
+                    value={newUserMystic}
+                    onChange={(e) => setNewUserMystic(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Nro. de WhatsApp (Últimos 8 números)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Ej. 11223344"
+                    value={newUserWhatsapp}
+                    onChange={(e) => setNewUserWhatsapp(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>PIN de 4 dígitos</label>
+                  <input
+                    type="password"
+                    maxLength="4"
+                    className="form-control"
+                    placeholder="🔑 ****"
+                    value={newUserPin}
+                    onChange={(e) => setNewUserPin(e.target.value)}
                     required
                   />
                 </div>
@@ -859,7 +866,7 @@ function App() {
                             min="0"
                             className="score-input"
                             style={{ width: '70px', height: '70px', fontSize: '2rem' }}
-                            value={predictions[`${currentTenant.id}_${currentUser.username}`]?.[currentMatch.id]?.scoreA ?? ''}
+                            value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreA ?? ''}
                             onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreA', e.target.value)}
                             disabled={currentMatch.status === 'played'}
                           />
@@ -869,7 +876,7 @@ function App() {
                             min="0"
                             className="score-input"
                             style={{ width: '70px', height: '70px', fontSize: '2rem' }}
-                            value={predictions[`${currentTenant.id}_${currentUser.username}`]?.[currentMatch.id]?.scoreB ?? ''}
+                            value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreB ?? ''}
                             onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreB', e.target.value)}
                             disabled={currentMatch.status === 'played'}
                           />
@@ -889,7 +896,7 @@ function App() {
                         <div style={{ textAlign: 'left' }}>
                           <div>Resultado Oficial: <strong style={{ color: 'var(--accent-color)' }}>{currentMatch.actualScoreA} - {currentMatch.actualScoreB}</strong></div>
                           <span className="points-pill">
-                            Puntos ganados: {calculatePoints(predictions[`${currentTenant.id}_${currentUser.username}`]?.[currentMatch.id], currentMatch)}
+                            Puntos ganados: {calculatePoints(predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id], currentMatch)}
                           </span>
                         </div>
                       ) : (
@@ -941,13 +948,13 @@ function App() {
                     </thead>
                     <tbody>
                       {getLeaderboard().map((row, idx) => (
-                        <tr key={row.username} className="leaderboard-row">
+                        <tr key={row.id} className="leaderboard-row">
                           <td className="rank-cell">{idx + 1}º</td>
                           <td>
                             <span
                               style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
-                              title="Haz clic para ver el nombre real"
-                              onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName })}
+                              title="Haz clic para ver el perfil"
+                              onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
                             >
                               {row.username}
                             </span>
@@ -974,22 +981,24 @@ function App() {
                   <label>Elegir Amigo</label>
                   <select
                     className="form-control"
-                    value={selectedFriend}
-                    onChange={(e) => setSelectedFriend(e.target.value)}
+                    value={selectedFriendId}
+                    onChange={(e) => setSelectedFriendId(e.target.value)}
                   >
                     <option value="">-- Selecciona un amigo --</option>
                     {participants.map(p => (
-                      <option key={p.username} value={p.username}>{p.username} ({p.full_name || p.fullName || p.username})</option>
+                      <option key={p.id} value={p.id}>{p.username} ({p.full_name || p.fullName || p.username})</option>
                     ))}
                   </select>
                 </div>
 
-                {selectedFriend ? (
+                {selectedFriendId ? (
                   <div>
-                    <h3 style={{ marginBottom: '1rem', color: 'var(--accent-color)' }}>Pronósticos de: {selectedFriend}</h3>
+                    <h3 style={{ marginBottom: '1rem', color: 'var(--accent-color)' }}>
+                      Pronósticos de: {participants.find(p => p.id === selectedFriendId)?.username}
+                    </h3>
                     <div className="matches-grid">
                       {matches.map(m => {
-                        const friendKey = `${currentTenant.id}_${selectedFriend}`;
+                        const friendKey = `${currentTenant.id}_${selectedFriendId}`;
                         const pred = predictions[friendKey]?.[m.id];
                         const isPlayed = m.status === 'played';
                         const pts = isPlayed ? calculatePoints(pred, m) : 0;
@@ -1021,11 +1030,38 @@ function App() {
               </div>
             )}
 
-             {activeTab === 'admin' && (
+            {/* PESTAÑA: Resultados Reales y comparaciones */}
+            {activeTab === 'admin' && (
               <div className="glass-card">
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   ⚙️ Resultados Oficiales del Mundial
                 </h2>
+                
+                {/* Generador de Invitación para el Admin */}
+                {currentUser.isAdmin && (
+                  <div className="glass-card mb-4" style={{ borderLeft: '4px solid var(--accent-color)', background: 'rgba(0, 255, 135, 0.02)' }}>
+                    <h4 style={{ marginBottom: '0.5rem', color: 'var(--accent-color)' }}>🎫 Generar Enlace de Invitación al Grupo</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                      Copia y comparte este enlace con tus amigos para que se unan directamente a este grupo de Prode:
+                    </p>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={getInviteLink()}
+                      readOnly
+                      onClick={(e) => {
+                        e.target.select();
+                        navigator.clipboard.writeText(getInviteLink());
+                        alert('¡Enlace de invitación copiado al portapapeles!');
+                      }}
+                      style={{ background: 'rgba(0,0,0,0.4)', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 500 }}
+                    />
+                    <small style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
+                      💡 Haz clic en el cuadro para copiar.
+                    </small>
+                  </div>
+                )}
+
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                   A continuación se muestran los marcadores de los partidos del mundial. Presiona el botón para sincronizar los resultados en tiempo real desde internet.
                 </p>
@@ -1045,12 +1081,12 @@ function App() {
                   <label>Comparar partido real con el pronóstico de:</label>
                   <select
                     className="form-control"
-                    value={comparisonUser}
-                    onChange={(e) => setComparisonUser(e.target.value)}
+                    value={comparisonUserId}
+                    onChange={(e) => setComparisonUserId(e.target.value)}
                   >
                     <option value="">-- No comparar / Solo ver resultados --</option>
                     {participants.map(p => (
-                      <option key={p.username} value={p.username}>{p.username} ({p.full_name || p.fullName || p.username})</option>
+                      <option key={p.id} value={p.id}>{p.username} ({p.full_name || p.fullName || p.username})</option>
                     ))}
                   </select>
                 </div>
@@ -1060,8 +1096,8 @@ function App() {
                     const isPlayed = match.status === 'played';
                     
                     // Obtener pronóstico de la persona seleccionada para comparar
-                    const compKey = `${currentTenant.id}_${comparisonUser}`;
-                    const pred = comparisonUser ? predictions[compKey]?.[match.id] : null;
+                    const compKey = `${currentTenant.id}_${comparisonUserId}`;
+                    const pred = comparisonUserId ? predictions[compKey]?.[match.id] : null;
                     const ptsEarned = (isPlayed && pred) ? calculatePoints(pred, match) : 0;
 
                     return (
@@ -1084,10 +1120,10 @@ function App() {
                         </div>
 
                         {/* Mostrar comparación si hay un usuario seleccionado */}
-                        {comparisonUser && (
+                        {comparisonUserId && (
                           <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--glass-border)', fontSize: '0.85rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>Pronóstico de <strong>{comparisonUser}</strong>:</span>
+                              <span>Pronóstico de <strong>{participants.find(p => p.id === comparisonUserId)?.username}</strong>:</span>
                               <strong style={{ fontSize: '1rem', color: pred ? 'white' : 'var(--text-secondary)' }}>
                                 {pred ? `${pred.scoreA} - ${pred.scoreB}` : 'Sin cargar'}
                               </strong>

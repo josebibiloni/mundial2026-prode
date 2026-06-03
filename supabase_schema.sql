@@ -11,11 +11,15 @@ CREATE TABLE IF NOT EXISTS tenants (
 CREATE TABLE IF NOT EXISTS participants (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-  username TEXT NOT NULL, -- Apodo / Nickname (Debe ser único por grupo)
-  full_name TEXT NOT NULL, -- Nombre Real
+  username TEXT NOT NULL,          -- Apodo / Nickname (Debe ser único por grupo)
+  full_name TEXT NOT NULL,         -- Nombre Real
+  mystic_phrase TEXT DEFAULT '',   -- Frase Mística
+  whatsapp TEXT NOT NULL,          -- Últimos 8 dígitos de Whatsapp (Login ID)
+  pin TEXT NOT NULL,               -- PIN de 4 dígitos (Login Password)
   is_admin BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (tenant_id, username)
+  UNIQUE (tenant_id, username),
+  UNIQUE (tenant_id, whatsapp)     -- Whatsapp único por grupo
 );
 
 -- 3. Tabla de Partidos (Fixture global)
@@ -34,17 +38,17 @@ CREATE TABLE IF NOT EXISTS matches (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Tabla de Pronósticos (Predicciones de cada usuario)
+-- 4. Tabla de Pronósticos (Predicciones de cada usuario, referenciadas por participant_id)
 CREATE TABLE IF NOT EXISTS predictions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-  participant_username TEXT NOT NULL,
+  participant_id UUID REFERENCES participants(id) ON DELETE CASCADE,
   match_id INT REFERENCES matches(id) ON DELETE CASCADE,
   score_a INT NOT NULL,
   score_b INT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (tenant_id, participant_username, match_id)
+  UNIQUE (tenant_id, participant_id, match_id)
 );
 
 -- 5. Mensajes Diarios del Top 3
