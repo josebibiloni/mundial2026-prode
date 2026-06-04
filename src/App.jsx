@@ -2029,7 +2029,7 @@ function App() {
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{selectedMatch.group} • Marcador Oficial</div>
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', marginTop: '0.5rem' }}>
                           <span style={{ fontSize: '1.1rem' }}>{selectedMatch.flagA} <strong>{selectedMatch.teamA}</strong></span>
-                          <span style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-color)', padding: '0 0.5rem', background: 'rgba(0, 255, 135, 0.05)', borderRadius: '6px' }}>
+                          <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent-color)', padding: '0.2rem 0.5rem', background: 'rgba(0, 255, 135, 0.05)', borderRadius: '6px', whiteSpace: 'nowrap' }}>
                             {selectedMatch.actualScoreA} - {selectedMatch.actualScoreB}
                           </span>
                           <span style={{ fontSize: '1.1rem' }}><strong>{selectedMatch.teamB}</strong> {selectedMatch.flagB}</span>
@@ -2138,7 +2138,9 @@ function App() {
                             </div>
                             {isPlayed && (
                               <div style={{ fontSize: '0.75rem', marginTop: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Real: {m.actualScoreA} - {m.actualScoreB}</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>
+                                  Resultado Real: <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', marginLeft: '0.25rem' }}>{m.actualScoreA} - {m.actualScoreB}</strong>
+                                </span>
                                 <span style={{ color: 'var(--accent-color)' }}>+{pts} pts</span>
                               </div>
                             )}
