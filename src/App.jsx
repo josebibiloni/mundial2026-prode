@@ -855,9 +855,11 @@ function App() {
   // Estilos inline dinámicos para el castigo de fondo en la mitad inferior o Boludeo Activo
   const hasActiveBoludeo = !!activeBoludeo;
 
-  const getPatternStyle = (patternName, color1, color2) => {
-    const c1 = punnishmentOverlayColor(punnishmentLighter(color1));
-    const c2 = punnishmentOverlayColor(punnishmentLighter(color2));
+  const getPatternStyle = (patternName, color1, color2, isBoludeo = false) => {
+    // Si es boludeo activo, usamos un color mucho más intenso ('80' = 50% de opacidad)
+    const opacityHex = isBoludeo ? '80' : '1A';
+    const c1 = punnishmentLighter(color1) + opacityHex;
+    const c2 = punnishmentLighter(color2) + opacityHex;
     const pat = patternName || 'diagonal';
 
     if (pat === 'horizontal') {
@@ -870,7 +872,7 @@ function App() {
       return {
         backgroundImage: `linear-gradient(45deg, ${c1} 25%, transparent 25%), linear-gradient(-45deg, ${c1} 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${c1} 75%), linear-gradient(-45deg, transparent 75%, ${c1} 75%)`,
         backgroundSize: '40px 40px',
-        backgroundColor: (color2 && typeof color2 === 'string') ? color2 + '10' : '#00ff8710'
+        backgroundColor: (color2 && typeof color2 === 'string') ? color2 + (isBoludeo ? '4D' : '10') : '#00ff8710'
       };
     }
     // diagonal
@@ -878,15 +880,11 @@ function App() {
   };
 
   const punishmentStyle = hasActiveBoludeo
-    ? getPatternStyle(activeBoludeo.pattern, activeBoludeo.color1, activeBoludeo.color2)
+    ? getPatternStyle(activeBoludeo.pattern, activeBoludeo.color1, activeBoludeo.color2, true)
     : (isInBottomHalf && leaderUser)
-      ? getPatternStyle(leaderUser.pattern, punishmentColor1, punishmentColor2)
+      ? getPatternStyle(leaderUser.pattern, punishmentColor1, punishmentColor2, false)
       : {};
 
-
-  function punnishmentOverlayColor(hex) {
-    return hex + '1A'; // Añadir transparencia de 10% (hex 1A) para que no tape las letras
-  }
   function punnishmentLighter(color) {
     return (color && typeof color === 'string' && color.startsWith('#')) ? color : '#ff0055';
   }
@@ -894,7 +892,7 @@ function App() {
   return (
     <div style={punishmentStyle} className={(isInBottomHalf || hasActiveBoludeo) ? "castigo-activo" : ""}>
       
-      {/* CAPA: Marca de agua repetida del Boludeo Activo o del Puesto 1 si está castigado */}
+      {/* CAPA: Marca de agua (deslizando por fondo en Boludeo Activo, estática en Puesto 1) */}
       {(hasActiveBoludeo || (isInBottomHalf && leaderUser)) && (
         <div style={{
           position: 'fixed',
@@ -905,27 +903,72 @@ function App() {
           pointerEvents: 'none',
           zIndex: 1,
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: '3rem',
-          padding: '2rem',
+          flexDirection: 'column',
+          justifyContent: 'space-around',
           overflow: 'hidden',
-          opacity: 0.1,
-          fontSize: '1.5rem',
-          fontWeight: '800',
+          opacity: hasActiveBoludeo ? 0.35 : 0.12,
+          fontSize: '1.8rem',
+          fontWeight: '900',
           textTransform: 'uppercase',
           color: '#ffffff',
           userSelect: 'none'
         }}>
-          {Array.from({ length: 40 }).map((_, i) => {
-            const label = hasActiveBoludeo
-              ? `🔥 ${activeBoludeo.triggerer}: "${activeBoludeo.phrase || '¡A JUGAR AL FÚTBOL!'}"`
-              : `👑 ${leaderUser.username}: "${leaderUser.mysticPhrase || 'SOY EL MEJOR'}"`;
-            return (
-              <span key={i} style={{ transform: 'rotate(-15deg)', whiteSpace: 'nowrap' }}>
-                {label}
-              </span>
-            );
-          })}
+          {hasActiveBoludeo ? (
+            <>
+              <style>{`
+                @keyframes marquee-left-slow {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-50%); }
+                }
+                .boludeo-marquee {
+                  display: flex;
+                  width: max-content;
+                  gap: 4rem;
+                  animation: marquee-left-slow 15s linear infinite;
+                }
+                .boludeo-marquee-row {
+                  overflow: hidden;
+                  width: 100%;
+                  display: flex;
+                  align-items: center;
+                  transform: rotate(-5deg);
+                }
+              `}</style>
+              {Array.from({ length: 4 }).map((_, rowIndex) => {
+                const label = `🔥 ${activeBoludeo.triggerer}: "${activeBoludeo.phrase || '¡A JUGAR AL FÚTBOL!'}" • `;
+                const repeatedLabel = label.repeat(6);
+                return (
+                  <div key={rowIndex} className="boludeo-marquee-row">
+                    <div className="boludeo-marquee" style={{ 
+                      animationDirection: rowIndex % 2 === 0 ? 'normal' : 'reverse',
+                      animationDuration: `${12 + rowIndex * 4}s`
+                    }}>
+                      <span>{repeatedLabel}</span>
+                      <span>{repeatedLabel}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          ) : (
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '3rem',
+              padding: '2rem',
+              width: '100%',
+              height: '100%'
+            }}>
+              {Array.from({ length: 40 }).map((_, i) => {
+                const label = `👑 ${leaderUser.username}: "${leaderUser.mysticPhrase || 'SOY EL MEJOR'}"`;
+                return (
+                  <span key={i} style={{ transform: 'rotate(-15deg)', whiteSpace: 'nowrap' }}>
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
