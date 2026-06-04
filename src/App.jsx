@@ -40,6 +40,14 @@ function App() {
   const [banterMessage, setBanterMessage] = useState('');
   const [boludeoCooldown, setBoludeoCooldown] = useState(0); // Temporizador de cooldown
 
+  // Configuración de Boludeo Personalizado
+  const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
+  const [setupColor1, setSetupColor1] = useState('#ff0055');
+  const [setupColor2, setSetupColor2] = useState('#00ff87');
+  const [setupPattern, setSetupPattern] = useState('diagonal');
+  const [setupPhrase, setSetupPhrase] = useState('');
+
+
 
   // Estado de Boludeo Activo (Efecto de 30 segundos)
   const [activeBoludeo, setActiveBoludeo] = useState(null); // { triggerer, color1, color2, phrase, message, endedAt }
@@ -128,6 +136,7 @@ function App() {
               color2: latest.stripe_color_2,
               phrase: latest.mystic_phrase,
               message: latest.message,
+              pattern: latest.pattern || 'diagonal',
               endedAt: Date.now() + 30000
             });
 
@@ -170,6 +179,48 @@ function App() {
     return () => clearInterval(timer);
   }, [boludeoCooldown]);
 
+  // Guardar configuración de boludeo localmente y en base de datos
+  const handleSaveSetup = async () => {
+    if (!currentUser || !currentTenant) return;
+
+    setCurrentUser(prev => ({
+      ...prev,
+      stripeColor1: setupColor1,
+      stripeColor2: setupColor2,
+      mysticPhrase: setupPhrase,
+      pattern: setupPattern
+    }));
+
+    if (isSupabaseConnected && supabase) {
+      try {
+        const updates = {
+          stripe_color_1: setupColor1,
+          stripe_color_2: setupColor2,
+          mystic_phrase: setupPhrase,
+          pattern: setupPattern
+        };
+
+        const { error } = await supabase.from('participants')
+          .update(updates)
+          .eq('id', currentUser.id);
+
+        if (error) {
+          // Si da error por la columna pattern, reintentamos sin ella
+          if (error.message?.includes('pattern') || error.code === '42703') {
+            const { stripe_color_1, stripe_color_2, mystic_phrase } = updates;
+            await supabase.from('participants')
+              .update({ stripe_color_1, stripe_color_2, mystic_phrase })
+              .eq('id', currentUser.id);
+          } else {
+            console.error("Error al guardar setup:", error);
+          }
+        }
+      } catch (err) {
+        console.error("Error al guardar setup:", err);
+      }
+    }
+  };
+
   // Probar el boludeo de forma puramente local (Previsualización)
   const handleLocalPreviewBoludeo = () => {
     if (!currentUser || !currentTenant) return;
@@ -178,10 +229,11 @@ function App() {
 
     setActiveBoludeo({
       triggerer: `${(currentUser?.username || '').trim()} (Prueba Local)`,
-      color1: currentUser.stripeColor1 || '#ff0055',
-      color2: currentUser.stripeColor2 || '#00ff87',
-      phrase: currentUser.mysticPhrase || '¡A JUGAR AL FÚTBOL!',
+      color1: setupColor1,
+      color2: setupColor2,
+      phrase: setupPhrase || '¡A JUGAR AL FÚTBOL!',
       message: randomQuote,
+      pattern: setupPattern,
       endedAt: Date.now() + 30000
     });
 
@@ -211,18 +263,22 @@ function App() {
     const newEvent = {
       tenant_id: currentTenant.id,
       triggered_by_username: currentUser.username,
-      stripe_color_1: currentUser.stripeColor1 || '#ff0055',
-      stripe_color_2: currentUser.stripeColor2 || '#00ff87',
-      mystic_phrase: currentUser.mysticPhrase || '¡A JUGAR AL FÚTBOL!',
-      message: randomQuote
+      stripe_color_1: setupColor1,
+      stripe_color_2: setupColor2,
+      mystic_phrase: setupPhrase || '¡A JUGAR AL FÚTBOL!',
+      message: randomQuote,
+      pattern: setupPattern
     };
 
     if (isSupabaseConnected && supabase) {
       try {
         const { error } = await supabase.from('boludeo_events').insert(newEvent);
         if (error) {
-          // Si da error porque la tabla no existe, dar instrucciones claras
-          if (error.code === '42P01') {
+          if (error.message?.includes('pattern') || error.code === '42703') {
+            // Reintentar sin la columna pattern
+            const { tenant_id, triggered_by_username, stripe_color_1, stripe_color_2, mystic_phrase, message } = newEvent;
+            await supabase.from('boludeo_events').insert({ tenant_id, triggered_by_username, stripe_color_1, stripe_color_2, mystic_phrase, message });
+          } else if (error.code === '42P01') {
             alert('⚠️ La tabla "boludeo_events" no existe en Supabase todavía.\n\nPor favor ejecuta el comando SQL en la consola de Supabase SQL Editor para crearla.');
           } else {
             alert('Error al lanzar boludeo: ' + error.message);
@@ -409,6 +465,7 @@ function App() {
         whatsapp: user.whatsapp,
         stripeColor1: user.stripe_color_1,
         stripeColor2: user.stripe_color_2,
+        pattern: user.pattern || 'diagonal',
         points: totalPoints,
         exactScores,
         correctOutcomes
@@ -538,8 +595,14 @@ function App() {
             whatsapp: registeredUser.whatsapp,
             isAdmin: registeredUser.is_admin,
             stripeColor1: registeredUser.stripe_color_1,
-            stripeColor2: registeredUser.stripe_color_2
+            stripeColor2: registeredUser.stripe_color_2,
+            pattern: registeredUser.pattern || 'diagonal'
           };
+
+          setSetupColor1(registeredUser.stripe_color_1 || '#ff0055');
+          setSetupColor2(registeredUser.stripe_color_2 || '#00ff87');
+          setSetupPattern(registeredUser.pattern || 'diagonal');
+          setSetupPhrase(registeredUser.mystic_phrase || '');
 
           setCurrentUser(loggedUser);
           await loadParticipantsForTenant(currentTenant.id);
@@ -577,8 +640,14 @@ function App() {
       whatsapp: found.whatsapp,
       isAdmin: found.is_admin,
       stripeColor1: found.stripe_color_1,
-      stripeColor2: found.stripe_color_2
+      stripeColor2: found.stripe_color_2,
+      pattern: found.pattern || 'diagonal'
     };
+
+    setSetupColor1(found.stripe_color_1 || '#ff0055');
+    setSetupColor2(found.stripe_color_2 || '#00ff87');
+    setSetupPattern(found.pattern || 'diagonal');
+    setSetupPhrase(found.mystic_phrase || '');
 
     setCurrentUser(loggedUser);
     triggerBanterPopup(loggedUser);
@@ -784,11 +853,33 @@ function App() {
   // Estilos inline dinámicos para el castigo de fondo en la mitad inferior o Boludeo Activo
   const hasActiveBoludeo = !!activeBoludeo;
 
-  const punishmentStyle = hasActiveBoludeo ? {
-    backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color2))} 40px)`
-  } : isInBottomHalf ? {
-    backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor2))} 40px)`
-  } : {};
+  const getPatternStyle = (patternName, color1, color2) => {
+    const c1 = punnishmentOverlayColor(punnishmentLighter(color1));
+    const c2 = punnishmentOverlayColor(punnishmentLighter(color2));
+    const pat = patternName || 'diagonal';
+
+    if (pat === 'horizontal') {
+      return { backgroundImage: `repeating-linear-gradient(0deg, ${c1} 0px, ${c1} 20px, ${c2} 20px, ${c2} 40px)` };
+    }
+    if (pat === 'vertical') {
+      return { backgroundImage: `repeating-linear-gradient(90deg, ${c1} 0px, ${c1} 20px, ${c2} 20px, ${c2} 40px)` };
+    }
+    if (pat === 'checkers') {
+      return {
+        backgroundImage: `linear-gradient(45deg, ${c1} 25%, transparent 25%), linear-gradient(-45deg, ${c1} 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${c1} 75%), linear-gradient(-45deg, transparent 75%, ${c1} 75%)`,
+        backgroundSize: '40px 40px',
+        backgroundColor: (color2 && typeof color2 === 'string') ? color2 + '10' : '#00ff8710'
+      };
+    }
+    // diagonal
+    return { backgroundImage: `repeating-linear-gradient(45deg, ${c1} 0px, ${c1} 20px, ${c2} 20px, ${c2} 40px)` };
+  };
+
+  const punishmentStyle = hasActiveBoludeo
+    ? getPatternStyle(activeBoludeo.pattern, activeBoludeo.color1, activeBoludeo.color2)
+    : (isInBottomHalf && leaderUser)
+      ? getPatternStyle(leaderUser.pattern, punishmentColor1, punishmentColor2)
+      : {};
 
 
   function punnishmentOverlayColor(hex) {
@@ -1183,31 +1274,32 @@ function App() {
                     🔥 Test Boludeo del #1
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                    Presiona "💥 ¡BOLUDEAR!" para molestar a todos tus amigos (menos a ti), o usa "🔍 PROBAR" para previsualizar el efecto solo en tu dispositivo.
+                    Personaliza tu joda presionando "⚙️ SETUP BOLUDEO" o castiga a todos tus amigos con "💥 ¡BOLUDEAR!".
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
                   <button 
                     className="btn-secondary" 
-                    onClick={handleLocalPreviewBoludeo} 
-                    disabled={boludeoCooldown > 0}
+                    onClick={() => setShowSetupBoludeo(!showSetupBoludeo)} 
                     style={{ 
                       width: 'auto',
-                      minWidth: '100px',
+                      minWidth: '120px',
                       borderColor: '#ffb703',
                       color: '#ffb703',
                       fontWeight: 'bold',
                       fontSize: '0.95rem',
                       padding: '0.6rem 1.2rem',
-                      borderRadius: '8px',
-                      cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer'
+                      borderRadius: '8px'
                     }}
                   >
-                    🔍 PROBAR
+                    ⚙️ SETUP BOLUDEO
                   </button>
                   <button 
                     className="btn-primary" 
-                    onClick={handleTriggerBoludeo} 
+                    onClick={async () => {
+                      await handleSaveSetup();
+                      await handleTriggerBoludeo();
+                    }} 
                     disabled={boludeoCooldown > 0}
                     style={{ 
                       width: 'auto', 
@@ -1227,6 +1319,89 @@ function App() {
                   </button>
                 </div>
               </div>
+
+              {/* Panel de Configuración Expandible */}
+              {showSetupBoludeo && (
+                <div className="glass-card animate-fade-in" style={{ padding: '1.25rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', marginTop: '0.5rem' }}>
+                  <h5 style={{ color: '#ffb703', fontSize: '0.95rem', marginBottom: '1rem', fontWeight: 'bold' }}>⚙️ Personalizar mi Boludeo</h5>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Frase Mística de la Joda</label>
+                      <input 
+                        type="text" 
+                        className="form-control"
+                        placeholder="Ej. ¡Llora la esférica!"
+                        value={setupPhrase}
+                        onChange={(e) => setSetupPhrase(e.target.value)}
+                        style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
+                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Color Raya 1</label>
+                        <input 
+                          type="color" 
+                          style={{ height: '38px', width: '100%', cursor: 'pointer', padding: 0, background: 'none', border: 'none' }}
+                          value={setupColor1}
+                          onChange={(e) => setSetupColor1(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
+                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Color Raya 2</label>
+                        <input 
+                          type="color" 
+                          style={{ height: '38px', width: '100%', cursor: 'pointer', padding: 0, background: 'none', border: 'none' }}
+                          value={setupColor2}
+                          onChange={(e) => setSetupColor2(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: '1 1 140px', margin: 0 }}>
+                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Patrón de Fondo</label>
+                        <select 
+                          className="form-control"
+                          value={setupPattern}
+                          onChange={(e) => setSetupPattern(e.target.value)}
+                          style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff', height: '38px' }}
+                        >
+                          <option value="diagonal">Líneas Diagonales</option>
+                          <option value="horizontal">Líneas Horizontales</option>
+                          <option value="vertical">Líneas Verticales</option>
+                          <option value="checkers">Tablero de Ajedrez</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <button 
+                        type="button"
+                        className="btn-secondary"
+                        onClick={async () => {
+                          await handleSaveSetup();
+                          handleLocalPreviewBoludeo();
+                        }}
+                        disabled={boludeoCooldown > 0}
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderColor: '#ffb703', color: '#ffb703', cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer' }}
+                      >
+                        🔍 PROBAR SETUP
+                      </button>
+                      <button 
+                        type="button"
+                        className="btn-primary"
+                        onClick={async () => {
+                          await handleSaveSetup();
+                          setShowSetupBoludeo(false);
+                          alert('¡Configuración guardada! Listo para usar.');
+                        }}
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', width: 'auto', background: 'linear-gradient(135deg, #00ff87, #60efff)' }}
+                      >
+                        💾 GUARDAR SETUP
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {boludeoCooldown > 0 && (
                 <div style={{ width: '100%', background: 'rgba(255, 255, 255, 0.08)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
