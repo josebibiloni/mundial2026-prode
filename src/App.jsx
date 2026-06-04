@@ -4,6 +4,16 @@ import { banterPhrases } from './data/banterPhrases';
 import { soccerQuotes } from './data/soccerQuotes';
 import { supabase } from './lib/supabaseClient';
 
+const welcomeBanterPhrases = [
+  "Otro que se anota para decir cómo van a salir los partidos, y es un tremendo patadura... 🩴",
+  "Otro gil que se anota. ¿Pensás que vas a ganar? Ja. 😂",
+  "¿Quién está invitando a esta gente??? Miren al nuevo... 🤡",
+  "Acá no hay nadie que sepa de fuchibol, ¡y vos acabás de bajar el promedio! 📉",
+  "Bienvenido al fondo de la tabla. Ponete cómodo que de ahí no salís. 🛋️",
+  "Registrado con éxito. Tu función principal será aportar puntos fáciles para el resto. 🎁",
+  "Bienvenido. Tus predicciones ya fueron registradas en la categoría 'Fantasías imposibles'. 🦄"
+];
+
 function App() {
   const isSupabaseConnected = true;
 
@@ -39,6 +49,8 @@ function App() {
   // Popup de Chicanas
   const [showBanterPopup, setShowBanterPopup] = useState(false);
   const [banterMessage, setBanterMessage] = useState('');
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [welcomePopupMessage, setWelcomePopupMessage] = useState('');
   const [boludeoCooldown, setBoludeoCooldown] = useState(0); // Temporizador de cooldown
 
   // Configuración de Boludeo Personalizado
@@ -608,7 +620,11 @@ function App() {
 
           setCurrentUser(loggedUser);
           await loadParticipantsForTenant(currentTenant.id);
-          triggerBanterPopup(loggedUser);
+          
+          const randomIdx = Math.floor(Math.random() * welcomeBanterPhrases.length);
+          setWelcomePopupMessage(welcomeBanterPhrases[randomIdx]);
+          setShowWelcomePopup(true);
+          
           setActiveTab('predictions');
         }
       } catch (err) {
@@ -974,6 +990,39 @@ function App() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL WELCOME POPUP (Mensaje ácido de bienvenida al registrarse) */}
+      {showWelcomePopup && (
+        <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 2005, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #00ff87', animation: 'float 0.5s ease-out', maxWidth: '480px', width: '90%', padding: '2rem' }}>
+            <span style={{ fontSize: '3.5rem' }}>🤡</span>
+            <h2 style={{ marginTop: '1rem', color: '#00ff87', fontSize: '1.75rem' }}>¡BIENVENIDO, PATADURA!</h2>
+            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
+              Te registraste en: {currentTenant?.name}
+            </h4>
+            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.25rem', lineHeight: '1.6', fontWeight: 600, fontStyle: 'italic' }}>
+              "{welcomePopupMessage}"
+            </p>
+            <button 
+              className="btn-primary" 
+              onClick={() => setShowWelcomePopup(false)}
+              style={{ 
+                marginTop: '1.5rem', 
+                width: 'auto', 
+                padding: '0.75rem 3rem', 
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #00ff87, #60efff)',
+                border: 'none',
+                color: '#000',
+                cursor: 'pointer'
+              }}
+            >
+              Cerrar y Tragar Veneno 🧪
+            </button>
+          </div>
         </div>
       )}
 
