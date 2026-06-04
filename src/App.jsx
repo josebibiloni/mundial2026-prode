@@ -1333,26 +1333,41 @@ function App() {
             <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
               Te registraste en: {currentTenant?.name}
             </h4>
-            <p style={{ color: 'var(--text-primary)', margin: '1.5rem 0', fontSize: '1.25rem', lineHeight: '1.6', fontWeight: 600, fontStyle: 'italic' }}>
+            <p style={{ color: 'var(--text-primary)', margin: '1.5rem 0', fontSize: '1.25rem', lineHeight: '1.6', fontWeight: 600, fontStyle: 'italic', textAlign: 'center' }}>
               "{welcomePopupMessage}"
             </p>
-            <button 
-              className="btn-primary" 
-              onClick={() => setShowWelcomePopup(false)}
-              style={{ 
-                marginTop: '1.5rem', 
-                width: 'auto', 
-                padding: '0.75rem 3rem', 
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #00ff87, #60efff)',
-                border: 'none',
-                color: '#000',
-                cursor: 'pointer'
-              }}
-            >
-              Cerrar y Tragar Veneno 🧪
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+              <button 
+                className="btn-primary" 
+                onClick={() => setShowWelcomePopup(false)}
+                style={{ 
+                  flex: '1 1 180px',
+                  padding: '0.75rem 1.5rem', 
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(135deg, #00ff87, #60efff)',
+                  border: 'none',
+                  color: '#000',
+                  cursor: 'pointer'
+                }}
+              >
+                Seguí, Cebollita!
+              </button>
+              <button 
+                className="btn-secondary" 
+                disabled
+                style={{ 
+                  flex: '1 1 180px',
+                  padding: '0.75rem 1.5rem', 
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'not-allowed',
+                  opacity: 0.5
+                }}
+              >
+                Modo Dios (Messi) 🐐
+              </button>
+            </div>
           </div>
         </div>
       )}
