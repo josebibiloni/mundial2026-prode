@@ -68,6 +68,11 @@ function App() {
   const [replyMove, setReplyMove] = useState('rock');
   const [replyChicana, setReplyChicana] = useState('');
   const [selectedReplyDuel, setSelectedReplyDuel] = useState(null);
+  const [isRandomOpponent, setIsRandomOpponent] = useState(false);
+  const [systemDuelPhrase, setSystemDuelPhrase] = useState('');
+  const [activeLosingDuelId, setActiveLosingDuelId] = useState(null);
+  const [loserResponseText, setLoserResponseText] = useState('');
+  const [showLoserResponseModal, setShowLoserResponseModal] = useState(false);
 
   // Configuración de Boludeo Personalizado
   const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
