@@ -11,7 +11,14 @@ const welcomeBanterPhrases = [
   "Acá no hay nadie que sepa de fuchibol, ¡y vos acabás de bajar el promedio! 📉",
   "Bienvenido al fondo de la tabla. Ponete cómodo que de ahí no salís. 🛋️",
   "Registrado con éxito. Tu función principal será aportar puntos fáciles para el resto. 🎁",
-  "Bienvenido. Tus predicciones ya fueron registradas en la categoría 'Fantasías imposibles'. 🦄"
+  "Bienvenido. Tus predicciones ya fueron registradas en la categoría 'Fantasías imposibles'. 🦄",
+  "¿En serio vas a intentar predecir? Si de fútbol sabés lo mismo que de física cuántica... 🤓",
+  "Llegó el experto que piensa que la pelota es cuadrada. Suerte con eso... 🩴",
+  "¿Quién te dio permiso para opinar de fútbol? Poné cualquier número, total vas a errar. 📉",
+  "Otro que viene a dar cátedra y no sabe lo que es un offside. Bienvenido... 🤡",
+  "Tus amigos ya hicieron una vaquita para comprarte un manual de fútbol básico. 📘",
+  "Ingresaste con éxito. La base de datos ya redujo tus probabilidades de acierto a cero. 🤖",
+  "A ver qué verdura tirás hoy en los pronósticos. ¡Preparate para quedar último! 🏹"
 ];
 
 function App() {
@@ -668,7 +675,12 @@ function App() {
     setSetupPhrase(found.mystic_phrase || '');
 
     setCurrentUser(loggedUser);
-    triggerBanterPopup(loggedUser);
+    
+    // Disparar popup de bienvenida ácida en Login
+    const randomIdx = Math.floor(Math.random() * welcomeBanterPhrases.length);
+    setWelcomePopupMessage(welcomeBanterPhrases[randomIdx]);
+    setShowWelcomePopup(true);
+    
     setActiveTab('predictions');
   };
 
