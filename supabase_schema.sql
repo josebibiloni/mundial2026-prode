@@ -116,3 +116,6 @@ CREATE TABLE IF NOT EXISTS mini_duels (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Deshabilitar RLS para permitir accesos anónimos de lectura/escritura en el juego
+ALTER TABLE mini_duels DISABLE ROW LEVEL SECURITY;
+
