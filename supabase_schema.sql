@@ -99,3 +99,19 @@ CREATE TABLE IF NOT EXISTS boludeo_events (
   message TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 7. Tabla de Mini Duelos (Piedra, Papel o Tijera)
+CREATE TABLE IF NOT EXISTS mini_duels (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+  challenger_username TEXT NOT NULL,
+  opponent_username TEXT NOT NULL,
+  challenger_move TEXT NOT NULL,
+  challenger_message TEXT,
+  opponent_move TEXT,
+  opponent_message TEXT,
+  status TEXT DEFAULT 'pending', -- 'pending', 'completed'
+  winner_username TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
