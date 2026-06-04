@@ -261,9 +261,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--form-bg);
   border: 1px solid var(--glass-border);
-  color: white;
+  color: var(--text-primary);
   padding: 0.85rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -274,7 +274,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border-hover);
   border-color: var(--glass-border-hover);
 }
 
@@ -375,10 +375,10 @@ h1, h2, h3, h4, h5, h6 {
 .score-input {
   width: 50px;
   height: 50px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--form-bg);
   border: 2px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  color: white;
+  color: var(--input-color);
   text-align: center;
   font-size: 1.5rem;
   font-weight: 700;
