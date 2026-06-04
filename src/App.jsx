@@ -2130,11 +2130,11 @@ function App() {
                           <div key={m.id} className="glass-card" style={{ padding: '1rem' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>{m.group}</div>
                             <div className="d-flex" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>{m.flagA} {m.teamA}</span>
-                              <strong style={{ fontSize: '1.2rem', padding: '0 0.5rem' }}>
+                              <span style={{ flex: 1, textAlign: 'left' }}>{m.flagA} {m.teamA}</span>
+                              <strong style={{ fontSize: '1.2rem', minWidth: '80px', textAlign: 'center', padding: '0 0.5rem' }}>
                                 {pred ? `${pred.scoreA} - ${pred.scoreB}` : '-'}
                               </strong>
-                              <span>{m.teamB} {m.flagB}</span>
+                              <span style={{ flex: 1, textAlign: 'right' }}>{m.teamB} {m.flagB}</span>
                             </div>
                             {isPlayed && (
                               <div style={{ fontSize: '0.75rem', marginTop: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
