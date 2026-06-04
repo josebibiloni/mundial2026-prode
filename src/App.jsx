@@ -148,10 +148,7 @@ function App() {
               setShowBoludeoPopup(false);
             }, 7000);
 
-            // Temporizador para quitar el efecto de fondo y marca de agua a los 30 segundos
-            setTimeout(() => {
-              setActiveBoludeo(null);
-            }, 30000);
+            // El efecto de fondo y marca de agua ahora se quita automáticamente mediante useEffect
           }
         }
       } catch (err) {
@@ -178,6 +175,21 @@ function App() {
     }, 1000);
     return () => clearInterval(timer);
   }, [boludeoCooldown]);
+
+  // Manejar el ciclo de vida del Boludeo Activo de forma centralizada y robusta
+  useEffect(() => {
+    if (!activeBoludeo) return;
+    const timeLeft = activeBoludeo.endedAt - Date.now();
+    if (timeLeft <= 0) {
+      setActiveBoludeo(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setActiveBoludeo(null);
+    }, timeLeft);
+    return () => clearTimeout(timer);
+  }, [activeBoludeo]);
+
 
   // Guardar configuración de boludeo localmente y en base de datos
   const handleSaveSetup = async () => {
@@ -247,10 +259,6 @@ function App() {
     setTimeout(() => {
       setShowBoludeoPopup(false);
     }, 7000);
-
-    setTimeout(() => {
-      setActiveBoludeo(null);
-    }, 30000);
   };
 
   // Activar el boludeo del #1 para todos los demás
