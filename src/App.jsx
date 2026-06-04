@@ -924,7 +924,10 @@ function App() {
                   display: flex;
                   width: max-content;
                   gap: 4rem;
-                  animation: marquee-left-slow 15s linear infinite;
+                  animation: marquee-left-slow 20s linear infinite;
+                }
+                .boludeo-marquee span {
+                  white-space: nowrap;
                 }
                 .boludeo-marquee-row {
                   overflow: hidden;
@@ -937,11 +940,13 @@ function App() {
               {Array.from({ length: 4 }).map((_, rowIndex) => {
                 const label = `🔥 ${activeBoludeo.triggerer}: "${activeBoludeo.phrase || '¡A JUGAR AL FÚTBOL!'}" • `;
                 const repeatedLabel = label.repeat(6);
+                const fontSizes = ['1.6rem', '2.5rem', '1.3rem', '2.0rem'];
+                const durations = ['28s', '20s', '36s', '24s'];
                 return (
-                  <div key={rowIndex} className="boludeo-marquee-row">
+                  <div key={rowIndex} className="boludeo-marquee-row" style={{ fontSize: fontSizes[rowIndex] }}>
                     <div className="boludeo-marquee" style={{ 
                       animationDirection: rowIndex % 2 === 0 ? 'normal' : 'reverse',
-                      animationDuration: `${12 + rowIndex * 4}s`
+                      animationDuration: durations[rowIndex]
                     }}>
                       <span>{repeatedLabel}</span>
                       <span>{repeatedLabel}</span>
