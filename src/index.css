@@ -20,6 +20,10 @@
   --radius-lg: 24px;
   --form-bg: rgba(0, 0, 0, 0.4);
   --input-color: #ffffff;
+  --points-partial: #60efff;
+  --points-partial-bg: rgba(96, 239, 255, 0.15);
+  --points-zero-bg: rgba(255, 255, 255, 0.03);
+  --points-zero-border: rgba(255, 255, 255, 0.05);
   
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
@@ -47,6 +51,10 @@
     --glass-border-hover: rgba(0, 0, 0, 0.15);
     --form-bg: rgba(255, 255, 255, 0.6);
     --input-color: #1a202c;
+    --points-partial: #007799;
+    --points-partial-bg: rgba(0, 119, 153, 0.10);
+    --points-zero-bg: rgba(0, 0, 0, 0.03);
+    --points-zero-border: rgba(0, 0, 0, 0.05);
   }
 }
 

@@ -1867,22 +1867,21 @@ function App() {
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                                <div style={{ textAlign: 'left' }}>
-                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resultado Oficial</span>
-                                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resultado Oficial:</span>
+                                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                                     {currentMatch.actualScoreA} - {currentMatch.actualScoreB}
                                   </div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tu Puntuación</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tu Puntuación:</span>
                                   <div style={{ 
                                     background: badgeBg, 
                                     color: badgeColor, 
-                                    padding: '0.4rem 1rem', 
+                                    padding: '0.25rem 0.75rem', 
                                     borderRadius: '8px', 
-                                    fontSize: '1.25rem', 
+                                    fontSize: '1.1rem', 
                                     fontWeight: 'bold',
-                                    marginTop: '0.2rem',
                                     border: `1px solid ${badgeColor}44`,
                                     display: 'inline-block'
                                   }}>
@@ -1891,15 +1890,18 @@ function App() {
                                 </div>
                               </div>
                               <div style={{ 
-                                background: 'rgba(255,255,255,0.03)', 
+                                background: 'var(--bg-secondary)', 
                                 padding: '0.75rem 1rem', 
                                 borderRadius: '8px', 
                                 borderLeft: `4px solid ${badgeColor}`,
                                 fontStyle: 'italic',
                                 fontSize: '0.95rem',
-                                color: '#fff',
+                                color: 'var(--text-primary)',
                                 marginTop: '0.5rem',
-                                textAlign: 'left'
+                                textAlign: 'left',
+                                borderTop: '1px solid var(--glass-border)',
+                                borderRight: '1px solid var(--glass-border)',
+                                borderBottom: '1px solid var(--glass-border)'
                               }}>
                                 {comment}
                               </div>
@@ -2065,20 +2067,20 @@ function App() {
                               const badgeStyle = pts === 7 
                                 ? { background: 'rgba(0, 255, 135, 0.15)', color: 'var(--accent-color)', border: '1px solid var(--accent-color)' }
                                 : pts >= 3
-                                  ? { background: 'rgba(96, 239, 255, 0.15)', color: '#60efff', border: '1px solid #60efff' }
-                                  : { background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', border: '1px solid rgba(255,255,255,0.05)' };
+                                  ? { background: 'var(--points-partial-bg)', color: 'var(--points-partial)', border: '1px solid var(--points-partial)' }
+                                  : { background: 'var(--points-zero-bg)', color: 'var(--text-secondary)', border: '1px solid var(--points-zero-border)' };
 
                               return (
                                 <tr key={row.id} className="leaderboard-row" style={{ background: isCurrentUser ? 'rgba(0, 255, 135, 0.04)' : 'transparent' }}>
                                   <td className="rank-cell" style={{ fontWeight: isCurrentUser ? 'bold' : 'normal' }}>{idx + 1}º</td>
                                   <td>
-                                    <span style={{ fontWeight: isCurrentUser ? 'bold' : 'normal', color: isCurrentUser ? 'var(--accent-color)' : 'white' }}>
+                                    <span style={{ fontWeight: isCurrentUser ? 'bold' : 'normal', color: isCurrentUser ? 'var(--accent-color)' : 'var(--text-primary)' }}>
                                       {row.username} {isCurrentUser && ' (Tú)'}
                                     </span>
                                   </td>
                                   <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
                                     {row.pred ? (
-                                      <span style={{ color: '#fff' }}>{row.pred.scoreA} - {row.pred.scoreB}</span>
+                                      <span style={{ color: 'var(--text-primary)' }}>{row.pred.scoreA} - {row.pred.scoreB}</span>
                                     ) : (
                                       <span style={{ color: 'var(--text-secondary)', fontWeight: 'normal', fontSize: '0.8rem' }}>Sin cargar</span>
                                     )}
@@ -2258,10 +2260,18 @@ function App() {
                         {comparisonUserId && (
                           <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--glass-border)', fontSize: '0.85rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>Pronóstico de <strong>{participants.find(p => p.id === comparisonUserId)?.username}</strong>:</span>
-                              <strong style={{ fontSize: '1rem', color: pred ? 'white' : 'var(--text-secondary)' }}>
+                              <span style={{ flex: 1, textAlign: 'left' }}>
+                                Pronóstico de <strong>{participants.find(p => p.id === comparisonUserId)?.username}</strong>:
+                              </span>
+                              <strong style={{ 
+                                minWidth: '80px', 
+                                textAlign: 'center', 
+                                fontSize: '1.1rem', 
+                                color: pred ? 'var(--text-primary)' : 'var(--text-secondary)' 
+                              }}>
                                 {pred ? `${pred.scoreA} - ${pred.scoreB}` : 'Sin cargar'}
                               </strong>
+                              <span style={{ flex: 1, textAlign: 'right' }}></span>
                             </div>
                             {isPlayed && pred && (
                               <div style={{ marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
