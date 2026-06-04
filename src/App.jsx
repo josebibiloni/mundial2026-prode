@@ -2621,13 +2621,13 @@ function App() {
 
                           return (
                             <div key={d.id} style={{ 
-                              background: 'rgba(0,0,0,0.2)', 
+                              background: 'var(--bg-secondary)', 
                               padding: '0.85rem', 
                               borderRadius: '8px',
-                              border: isIWinner ? '1px solid rgba(0, 255, 135, 0.2)' : isILoser ? '1px solid rgba(255, 77, 77, 0.2)' : '1px solid rgba(255,255,255,0.03)' 
+                              border: isIWinner ? '1px solid rgba(0, 255, 135, 0.2)' : isILoser ? '1px solid rgba(255, 77, 77, 0.2)' : '1px solid var(--glass-border)' 
                             }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                                   ⚔️ {d.challenger_username} vs {d.opponent_username}
                                 </span>
                                 <span style={{ 
@@ -2642,7 +2642,7 @@ function App() {
                                 </span>
                               </div>
 
-                              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                 <div>
                                   💬 {d.challenger_username}: "{d.challenger_message || '...'}" 
                                   {isCompleted && ` (${d.challenger_move === 'rock' ? '🪨' : d.challenger_move === 'paper' ? '📄' : '✂️'})`}
@@ -2656,13 +2656,16 @@ function App() {
                                 
                                 {isCompleted && d.loser_response && (
                                   <div style={{ 
-                                    background: 'rgba(255,255,255,0.03)', 
+                                    background: 'var(--bg-primary)', 
                                     padding: '0.4rem 0.6rem', 
                                     borderRadius: '4px', 
                                     marginTop: '0.4rem',
                                     borderLeft: '3px solid #ff4d4d',
-                                    color: '#fff',
-                                    fontSize: '0.82rem'
+                                    color: 'var(--text-primary)',
+                                    fontSize: '0.82rem',
+                                    borderTop: '1px solid var(--glass-border)',
+                                    borderRight: '1px solid var(--glass-border)',
+                                    borderBottom: '1px solid var(--glass-border)'
                                   }}>
                                     <strong>Descargo del Perdedor:</strong> "{d.loser_response}"
                                   </div>
