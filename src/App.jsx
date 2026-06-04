@@ -448,6 +448,12 @@ function App() {
         const resolvedParticipants = data || [];
         setParticipants(resolvedParticipants);
 
+        if (resolvedParticipants.length === 0) {
+          setIsAdminRegister(true);
+        } else {
+          setIsAdminRegister(false);
+        }
+
         // Mapear predicciones que estaban guardadas por username a su UUID correspondiente en el estado
         setPredictions(prev => {
           const next = { ...prev };
@@ -1694,15 +1700,17 @@ function App() {
                     required
                   />
                 </div>
-                <div className="form-group" style={{ flexDirection: 'row', gap: '0.5rem', alignItems: 'center' }}>
-                  <input
-                    type="checkbox"
-                    id="adminCheck"
-                    checked={isAdminRegister}
-                    onChange={(e) => setIsAdminRegister(e.target.checked)}
-                  />
-                  <label htmlFor="adminCheck" style={{ textTransform: 'none', cursor: 'pointer' }}>Ser Administrador</label>
-                </div>
+                {participants.length === 0 && (
+                  <div className="form-group" style={{ flexDirection: 'row', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      id="adminCheck"
+                      checked={isAdminRegister}
+                      onChange={(e) => setIsAdminRegister(e.target.checked)}
+                    />
+                    <label htmlFor="adminCheck" style={{ textTransform: 'none', cursor: 'pointer' }}>Ser Administrador</label>
+                  </div>
+                )}
                 <button type="submit" className="btn-primary">Registrarse y Jugar</button>
               </form>
             </div>
