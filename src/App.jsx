@@ -38,6 +38,8 @@ function App() {
   // Popup de Chicanas
   const [showBanterPopup, setShowBanterPopup] = useState(false);
   const [banterMessage, setBanterMessage] = useState('');
+  const [boludeoCooldown, setBoludeoCooldown] = useState(0); // Temporizador de cooldown
+
 
   // Estado de Boludeo Activo (Efecto de 30 segundos)
   const [activeBoludeo, setActiveBoludeo] = useState(null); // { triggerer, color1, color2, phrase, message, endedAt }
@@ -159,6 +161,46 @@ function App() {
     };
   }, [currentTenant, currentUser]);
 
+  // Decrementar el cooldown de boludeo segundo a segundo
+  useEffect(() => {
+    if (boludeoCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setBoludeoCooldown(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [boludeoCooldown]);
+
+  // Probar el boludeo de forma puramente local (Previsualización)
+  const handleLocalPreviewBoludeo = () => {
+    if (!currentUser || !currentTenant) return;
+
+    const randomQuote = soccerQuotes[Math.floor(Math.random() * soccerQuotes.length)];
+
+    setActiveBoludeo({
+      triggerer: `${(currentUser?.username || '').trim()} (Prueba Local)`,
+      color1: currentUser.stripeColor1 || '#ff0055',
+      color2: currentUser.stripeColor2 || '#00ff87',
+      phrase: currentUser.mysticPhrase || '¡A JUGAR AL FÚTBOL!',
+      message: randomQuote,
+      endedAt: Date.now() + 30000
+    });
+
+    setBoludeoPopupMessage(randomQuote);
+    setBoludeoPopupTriggerer(`${(currentUser?.username || '').trim()} (Prueba Local)`);
+    setShowBoludeoPopup(true);
+    
+    // Iniciar cooldown de 30 segundos
+    setBoludeoCooldown(30);
+
+    setTimeout(() => {
+      setShowBoludeoPopup(false);
+    }, 7000);
+
+    setTimeout(() => {
+      setActiveBoludeo(null);
+    }, 30000);
+  };
+
   // Activar el boludeo del #1 para todos los demás
   const handleTriggerBoludeo = async () => {
     if (!currentUser || !currentTenant) return;
@@ -186,26 +228,8 @@ function App() {
             alert('Error al lanzar boludeo: ' + error.message);
           }
         } else {
-          // Activar también localmente para que el emisor pueda ver el efecto de inmediato
-          setActiveBoludeo({
-            triggerer: (currentUser?.username || '').trim(),
-            color1: newEvent.stripe_color_1,
-            color2: newEvent.stripe_color_2,
-            phrase: newEvent.mystic_phrase,
-            message: randomQuote,
-            endedAt: Date.now() + 30000
-          });
-
-          setBoludeoPopupMessage(randomQuote);
-          setBoludeoPopupTriggerer((currentUser?.username || '').trim());
-          setShowBoludeoPopup(true);
-          setTimeout(() => {
-            setShowBoludeoPopup(false);
-          }, 7000);
-
-          setTimeout(() => {
-            setActiveBoludeo(null);
-          }, 30000);
+          // Iniciar cooldown de 30 segundos
+          setBoludeoCooldown(30);
         }
       } catch (err) {
         console.error(err);
@@ -1146,40 +1170,75 @@ function App() {
             {/* Banner de Test Boludeo */}
             <div className="glass-card mb-4" style={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
+              flexDirection: 'column',
               background: 'linear-gradient(135deg, rgba(255, 77, 77, 0.08), rgba(241, 168, 10, 0.08))', 
               border: '1px solid rgba(255, 77, 77, 0.3)',
               padding: '1.25rem',
               borderRadius: '12px',
-              gap: '1rem',
-              flexWrap: 'wrap'
+              gap: '1rem'
             }}>
-              <div style={{ flex: '1 1 250px' }}>
-                <h4 style={{ color: '#ffb703', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  🔥 Test Boludeo del #1
-                </h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                  Presiona el botón para chicanear e incomodar a todos tus amigos durante 30 segundos (¡también verás el efecto tú mismo!).
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ flex: '1 1 250px' }}>
+                  <h4 style={{ color: '#ffb703', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    🔥 Test Boludeo del #1
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    Presiona "💥 ¡BOLUDEAR!" para molestar a todos tus amigos (menos a ti), o usa "🔍 PROBAR" para previsualizar el efecto solo en tu dispositivo.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <button 
+                    className="btn-secondary" 
+                    onClick={handleLocalPreviewBoludeo} 
+                    disabled={boludeoCooldown > 0}
+                    style={{ 
+                      width: 'auto',
+                      minWidth: '100px',
+                      borderColor: '#ffb703',
+                      color: '#ffb703',
+                      fontWeight: 'bold',
+                      fontSize: '0.95rem',
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    🔍 PROBAR
+                  </button>
+                  <button 
+                    className="btn-primary" 
+                    onClick={handleTriggerBoludeo} 
+                    disabled={boludeoCooldown > 0}
+                    style={{ 
+                      width: 'auto', 
+                      minWidth: '130px',
+                      background: boludeoCooldown > 0 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ff4d4d, #f1a80a)', 
+                      border: 'none',
+                      boxShadow: boludeoCooldown > 0 ? 'none' : '0 4px 12px rgba(255, 77, 77, 0.4)',
+                      fontWeight: 'bold',
+                      fontSize: '0.95rem',
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      color: boludeoCooldown > 0 ? '#666' : '#fff',
+                      cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {boludeoCooldown > 0 ? `⏳ (${boludeoCooldown}s)` : '💥 ¡BOLUDEAR!'}
+                  </button>
+                </div>
               </div>
-              <button 
-                className="btn-primary" 
-                onClick={handleTriggerBoludeo} 
-                style={{ 
-                  width: 'auto', 
-                  minWidth: '130px',
-                  background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)', 
-                  border: 'none',
-                  boxShadow: '0 4px 12px rgba(255, 77, 77, 0.4)',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem',
-                  padding: '0.6rem 1.2rem',
-                  borderRadius: '8px'
-                }}
-              >
-                💥 ¡BOLUDEAR!
-              </button>
+
+              {boludeoCooldown > 0 && (
+                <div style={{ width: '100%', background: 'rgba(255, 255, 255, 0.08)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${(boludeoCooldown / 30) * 100}%`,
+                    background: 'linear-gradient(90deg, #ff4d4d, #f1a80a)',
+                    height: '100%',
+                    transition: 'width 1s linear',
+                    borderRadius: '3px'
+                  }} />
+                </div>
+              )}
             </div>
 
             {/* Menu Tabs */}
