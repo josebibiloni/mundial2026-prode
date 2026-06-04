@@ -23,6 +23,7 @@ const welcomeBanterPhrases = [
 
 function App() {
   const isSupabaseConnected = true;
+  const isPredictionsClosed = new Date() >= new Date('2026-06-10T23:59:00');
 
   // Sesión y Navegación
   const [currentTenant, setCurrentTenant] = useState(null); // { id, name }
@@ -88,6 +89,7 @@ function App() {
   const [showBoludeoPopup, setShowBoludeoPopup] = useState(false);
   const [boludeoPopupMessage, setBoludeoPopupMessage] = useState('');
   const [boludeoPopupTriggerer, setBoludeoPopupTriggerer] = useState('');
+  const [boludeoEventsList, setBoludeoEventsList] = useState([]);
 
   // Formularios de entrada
   const [newTenantName, setNewTenantName] = useState('');
@@ -406,7 +408,25 @@ function App() {
   useEffect(() => {
     if (!currentTenant) return;
     loadParticipantsForTenant(currentTenant.id);
+    loadBoludeoEventsForTenant(currentTenant.id);
   }, [currentTenant]);
+
+  const loadBoludeoEventsForTenant = async (tenantId) => {
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('boludeo_events')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          setBoludeoEventsList(data);
+        }
+      } catch (err) {
+        console.error("Error al cargar eventos de boludeo:", err);
+      }
+    }
+  };
 
   const loadParticipantsForTenant = async (tenantId) => {
     if (isSupabaseConnected && supabase) {
@@ -941,6 +961,13 @@ function App() {
   const handlePredictionChange = async (matchId, team, value) => {
     if (!currentUser || !currentTenant) return;
 
+    // Validación de fecha límite: 10 de Junio de 2026 a las 23:59:00
+    const closingTime = new Date('2026-06-10T23:59:00');
+    if (new Date() >= closingTime) {
+      alert('La carga y modificación de pronósticos finalizó el 10 de Junio de 2026 a las 23:59 (día previo al inicio del mundial).');
+      return;
+    }
+
     const parsedVal = value === '' ? '' : Math.max(0, parseInt(value) || 0);
     const key = `${currentTenant.id}_${currentUser.id}`;
     const userPreds = predictions[key] || {};
@@ -995,6 +1022,83 @@ function App() {
         console.error("Error al guardar el pronóstico:", err);
       }
     }
+  };
+
+  // Moderación de chicanas por el Admin
+  const handleModerateBoludeoEvent = async (eventId) => {
+    const deletedPlaceholder = "Borrado por el Admin (Se había ido al pasto...)";
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { error } = await supabase
+          .from('boludeo_events')
+          .update({ message: deletedPlaceholder })
+          .eq('id', eventId);
+        if (error) throw error;
+        await loadBoludeoEventsForTenant(currentTenant.id);
+        alert('Mensaje de chicana moderado con éxito.');
+      } catch (err) {
+        alert('Error al moderar chicana: ' + err.message);
+      }
+    } else {
+      setBoludeoEventsList(prev => prev.map(e => e.id === eventId ? { ...e, message: deletedPlaceholder } : e));
+      alert('Mensaje de chicana moderado localmente.');
+    }
+  };
+
+  // Moderación de descargos de duelos por el Admin
+  const handleModerateDuelResponse = async (duelId) => {
+    const deletedPlaceholder = "Borrado por el Admin (Se había ido al pasto...)";
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { error } = await supabase
+          .from('mini_duels')
+          .update({ loser_response: deletedPlaceholder })
+          .eq('id', duelId);
+        if (error) throw error;
+        await loadDuelsForTenant(currentTenant.id);
+        alert('Descargo de duelo moderado con éxito.');
+      } catch (err) {
+        alert('Error al moderar descargo: ' + err.message);
+      }
+    } else {
+      setDuels(prev => prev.map(d => d.id === duelId ? { ...d, loser_response: deletedPlaceholder } : d));
+      alert('Descargo de duelo moderado localmente.');
+    }
+  };
+
+  // Guardar puntuación de partido de forma manual por el Admin
+  const handleSaveMatchScoreManual = async (matchId, scoreA, scoreB, status) => {
+    if (!currentUser?.isAdmin) {
+      alert("Solo el administrador puede actualizar los resultados oficiales.");
+      return;
+    }
+
+    const parsedA = scoreA === '' || scoreA === null ? null : parseInt(scoreA);
+    const parsedB = scoreB === '' || scoreB === null ? null : parseInt(scoreB);
+
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { error } = await supabase
+          .from('matches')
+          .update({
+            actual_score_a: parsedA,
+            actual_score_b: parsedB,
+            status: status
+          })
+          .eq('id', matchId);
+        if (error) throw error;
+        alert("Marcador oficial actualizado correctamente.");
+      } catch (err) {
+        alert("Error al actualizar marcador en Supabase: " + err.message);
+      }
+    }
+
+    setMatches(prev => prev.map(m => m.id === matchId ? {
+      ...m,
+      actualScoreA: parsedA,
+      actualScoreB: parsedB,
+      status: status
+    } : m));
   };
 
   // Sincronizar marcadores reales
@@ -1130,6 +1234,11 @@ function App() {
   return (
     <div style={punishmentStyle} className={(isInBottomHalf || hasActiveBoludeo) ? "castigo-activo" : ""}>
       
+      {/* CAPA: Bandera de Argentina */}
+      <div className="argentina-flag-bg">
+        <div className="argentina-sun-overlay"></div>
+      </div>
+
       {/* CAPA: Marca de agua (deslizando por fondo en Boludeo Activo, estática en Puesto 1) */}
       {(hasActiveBoludeo || (isInBottomHalf && leaderUser)) && (
         <div style={{
@@ -1632,6 +1741,12 @@ function App() {
                       </div>
                     )}
 
+                    {currentMatch.status !== 'played' && isPredictionsClosed && (
+                      <div style={{ color: '#ffb703', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem', background: 'rgba(255, 183, 3, 0.1)', padding: '0.5rem', borderRadius: '4px' }}>
+                        🔒 Pronósticos cerrados por fecha límite (10 de Junio 23:59).
+                      </div>
+                    )}
+
                     <div className="match-body" style={{ flexDirection: 'column', gap: '1.5rem' }}>
                       <div className="d-flex" style={{ width: '100%', justifyContent: 'space-around', alignItems: 'center' }}>
                         
@@ -1644,24 +1759,24 @@ function App() {
                         {/* Inputs Grandes */}
                         <div className="prediction-inputs" style={{ gap: '1rem' }}>
                           <input
-                            type="number"
-                            min="0"
-                            className="score-input"
-                            style={{ width: '70px', height: '70px', fontSize: '2rem' }}
-                            value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreA ?? ''}
-                            onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreA', e.target.value)}
-                            disabled={currentMatch.status === 'played'}
-                          />
-                          <span className="score-separator" style={{ fontSize: '2rem' }}>-</span>
-                          <input
-                            type="number"
-                            min="0"
-                            className="score-input"
-                            style={{ width: '70px', height: '70px', fontSize: '2rem' }}
-                            value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreB ?? ''}
-                            onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreB', e.target.value)}
-                            disabled={currentMatch.status === 'played'}
-                          />
+                             type="number"
+                             min="0"
+                             className="score-input"
+                             style={{ width: '70px', height: '70px', fontSize: '2rem' }}
+                             value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreA ?? ''}
+                             onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreA', e.target.value)}
+                             disabled={currentMatch.status === 'played' || isPredictionsClosed}
+                           />
+                           <span className="score-separator" style={{ fontSize: '2rem' }}>-</span>
+                           <input
+                             type="number"
+                             min="0"
+                             className="score-input"
+                             style={{ width: '70px', height: '70px', fontSize: '2rem' }}
+                             value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreB ?? ''}
+                             onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreB', e.target.value)}
+                             disabled={currentMatch.status === 'played' || isPredictionsClosed}
+                           />
                         </div>
 
                         {/* Team B */}
@@ -2125,10 +2240,132 @@ function App() {
                             )}
                           </div>
                         )}
+                        {/* Formulario de actualización manual del Admin */}
+                        {currentUser.isAdmin && (
+                          <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const scoreA = e.target.elements.scoreA.value;
+                            const scoreB = e.target.elements.scoreB.value;
+                            const status = e.target.elements.status.value;
+                            handleSaveMatchScoreManual(match.id, scoreA, scoreB, status);
+                          }} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                              <input 
+                                type="number" 
+                                name="scoreA" 
+                                placeholder="Goles A" 
+                                defaultValue={match.actualScoreA ?? ''} 
+                                style={{ width: '60px', padding: '0.25rem', fontSize: '0.9rem', textAlign: 'center', background: 'var(--form-bg)', border: '1px solid var(--glass-border)', color: 'var(--input-color)', borderRadius: '4px' }} 
+                              />
+                              <span>-</span>
+                              <input 
+                                type="number" 
+                                name="scoreB" 
+                                placeholder="Goles B" 
+                                defaultValue={match.actualScoreB ?? ''} 
+                                style={{ width: '60px', padding: '0.25rem', fontSize: '0.9rem', textAlign: 'center', background: 'var(--form-bg)', border: '1px solid var(--glass-border)', color: 'var(--input-color)', borderRadius: '4px' }} 
+                              />
+                              <select 
+                                name="status" 
+                                defaultValue={match.status} 
+                                style={{ padding: '0.25rem', fontSize: '0.9rem', background: 'var(--form-bg)', border: '1px solid var(--glass-border)', color: 'var(--input-color)', borderRadius: '4px' }}
+                              >
+                                <option value="scheduled">Pendiente</option>
+                                <option value="played">Finalizado</option>
+                              </select>
+                              <button type="submit" className="btn-primary" style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}>
+                                Guardar
+                              </button>
+                            </div>
+                          </form>
+                        )}
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Moderación de Mensajes del Admin */}
+                {currentUser.isAdmin && (
+                  <div style={{ marginTop: '3rem', borderTop: '2px solid var(--glass-border)', paddingTop: '2rem' }}>
+                    <h3 style={{ fontSize: '1.3rem', color: '#ffb703', marginBottom: '1.5rem', fontWeight: 'bold' }}>
+                      🛡️ Panel de Moderación de Mensajes
+                    </h3>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                      
+                      {/* Chicanas */}
+                      <div className="glass-card" style={{ background: 'rgba(255, 77, 77, 0.02)' }}>
+                        <h4 style={{ color: '#ff4d4d', marginBottom: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>
+                          🔥 Chicanas y Boludeos
+                        </h4>
+                        {boludeoEventsList.length === 0 ? (
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No hay chicanas enviadas.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '350px', overflowY: 'auto' }}>
+                            {boludeoEventsList.map(ev => (
+                              <div key={ev.id} style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                  <strong>De: {ev.triggered_by_username}</strong>
+                                  <span>{new Date(ev.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <p style={{ fontSize: '0.85rem', fontStyle: 'italic', margin: '0.5rem 0', wordBreak: 'break-word' }}>
+                                  "{ev.message}"
+                                </p>
+                                {ev.message !== "Borrado por el Admin (Se había ido al pasto...)" && (
+                                  <button 
+                                    className="btn-secondary" 
+                                    onClick={() => handleModerateBoludeoEvent(ev.id)}
+                                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#ff4d4d', borderColor: '#ff4d4d', background: 'none', width: 'auto', marginTop: '0.25rem' }}
+                                  >
+                                    ⚠️ Moderar Mensaje
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Descargos */}
+                      <div className="glass-card" style={{ background: 'rgba(255, 183, 3, 0.02)' }}>
+                        <h4 style={{ color: '#ffb703', marginBottom: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>
+                          💬 Descargos de Duelos
+                        </h4>
+                        {(() => {
+                          const completedWithResponse = duels.filter(d => d.status === 'completed' && d.loser_response);
+                          if (completedWithResponse.length === 0) {
+                            return <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No hay descargos cargados.</p>;
+                          }
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '350px', overflowY: 'auto' }}>
+                              {completedWithResponse.map(dl => (
+                                <div key={dl.id} style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--glass-border)' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                    <strong>Ganó: {dl.winner_username}</strong>
+                                    <span>{new Date(dl.created_at || Date.now()).toLocaleDateString()}</span>
+                                  </div>
+                                  <p style={{ fontSize: '0.85rem', fontStyle: 'italic', margin: '0.5rem 0', wordBreak: 'break-word' }}>
+                                    "{dl.loser_response}"
+                                  </p>
+                                  {dl.loser_response !== "Borrado por el Admin (Se había ido al pasto...)" && (
+                                    <button 
+                                      className="btn-secondary" 
+                                      onClick={() => handleModerateDuelResponse(dl.id)}
+                                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#ffb703', borderColor: '#ffb703', background: 'none', width: 'auto', marginTop: '0.25rem' }}
+                                    >
+                                      ⚠️ Moderar Descargo
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

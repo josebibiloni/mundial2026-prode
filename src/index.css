@@ -8,25 +8,46 @@
   --primary-gold-glow: rgba(255, 215, 0, 0.4);
   --text-primary: #ffffff;
   --text-secondary: #a0aec0;
-  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-bg: rgba(10, 15, 29, 0.85); /* Opaque dark glass for backdrop visibility and readability */
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-hover: rgba(255, 255, 255, 0.2);
-  --glass-blur: blur(14px);
+  --glass-blur: blur(20px);
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
+  --form-bg: rgba(0, 0, 0, 0.4);
+  --input-color: #ffffff;
   
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: dark;
+  color-scheme: dark light;
   color: var(--text-primary);
   background-color: var(--bg-primary);
   background-image: var(--bg-gradient);
   background-attachment: fixed;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary: #f0f4f8;
+    --bg-secondary: #e2e8f0;
+    --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #d8e2dc 100%);
+    --accent-color: #00b35c; /* darker green for contrast */
+    --accent-glow: rgba(0, 179, 92, 0.2);
+    --primary-gold: #b38f00;
+    --primary-gold-glow: rgba(179, 143, 0, 0.2);
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --glass-bg: rgba(255, 255, 255, 0.85); /* light glassmorphism */
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-border-hover: rgba(0, 0, 0, 0.15);
+    --form-bg: rgba(255, 255, 255, 0.6);
+    --input-color: #1a202c;
+  }
 }
 
 * {
@@ -201,9 +222,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .form-control {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--form-bg);
   border: 1px solid var(--glass-border);
-  color: white;
+  color: var(--input-color);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
   font-size: 1rem;
@@ -213,7 +234,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .form-control:focus {
   border-color: var(--accent-color);
-  box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .btn-primary {
@@ -596,4 +617,45 @@ h1, h2, h3, h4, h5, h6 {
     padding: 1.25rem !important;
     margin: 0.75rem !important;
   }
+}
+
+/* Bandera de Argentina y Sol de Mayo de fondo */
+.argentina-flag-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -2;
+  background: linear-gradient(
+    to bottom,
+    #74ACDF 0%,
+    #74ACDF 33.33%,
+    #FFFFFF 33.33%,
+    #FFFFFF 66.66%,
+    #74ACDF 66.66%,
+    #74ACDF 100%
+  );
+  overflow: hidden;
+}
+
+@keyframes slow-rotate {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.argentina-sun-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70vmin;
+  height: 70vmin;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="15" fill="%23FCBF49"/><path d="M50 20 L50 32 M50 68 L50 80 M20 50 L32 50 M68 50 L80 50 M29 29 L37 37 M63 63 L71 71 M29 71 L37 63 M63 29 L71 37 M50 20 C48 24 48 28 50 32 C52 28 52 24 50 20 M50 68 C48 72 48 76 50 80 C52 76 52 72 50 68 M20 50 C24 48 28 48 32 50 C28 52 24 52 20 50 M68 50 C72 48 76 48 80 50 C76 52 72 52 68 50" stroke="%23FCBF49" stroke-width="1.5" stroke-linecap="round" fill="none"/><circle cx="50" cy="50" r="8" fill="%23FCBF49" stroke="%23D99A15" stroke-width="0.5"/><circle cx="47" cy="48" r="1" fill="%23000"/><circle cx="53" cy="48" r="1" fill="%23000"/><path d="M48 53 Q50 56 52 53" stroke="%23000" stroke-width="0.8" fill="none"/></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.85;
+  animation: slow-rotate 180s linear infinite;
+  pointer-events: none;
 }
