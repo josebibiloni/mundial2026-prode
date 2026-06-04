@@ -1869,7 +1869,7 @@ function App() {
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                                 <div style={{ textAlign: 'left' }}>
                                   <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resultado Oficial</span>
-                                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginTop: '0.2rem' }}>
+                                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', marginTop: '0.2rem' }}>
                                     {currentMatch.actualScoreA} - {currentMatch.actualScoreB}
                                   </div>
                                 </div>
