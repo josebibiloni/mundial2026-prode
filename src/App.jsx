@@ -763,8 +763,9 @@ function App() {
   const punishmentStyle = hasActiveBoludeo ? {
     backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(activeBoludeo.color2))} 40px)`
   } : isInBottomHalf ? {
-    backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punnishmentColor2))} 40px)`
+    backgroundImage: `repeating-linear-gradient(45deg, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor1))} 0px, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor1))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor2))} 20px, ${punnishmentOverlayColor(punnishmentLighter(punishmentColor2))} 40px)`
   } : {};
+
 
   function punnishmentOverlayColor(hex) {
     return hex + '1A'; // Añadir transparencia de 10% (hex 1A) para que no tape las letras
