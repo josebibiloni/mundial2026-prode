@@ -75,6 +75,19 @@ function App() {
   const [loserResponseText, setLoserResponseText] = useState('');
   const [showLoserResponseModal, setShowLoserResponseModal] = useState(false);
 
+  const refreshSystemDuelPhrase = () => {
+    if (banterPhrases && banterPhrases.length > 0) {
+      const randomIdx = Math.floor(Math.random() * banterPhrases.length);
+      setSystemDuelPhrase(banterPhrases[randomIdx]);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'duels') {
+      refreshSystemDuelPhrase();
+    }
+  }, [activeTab]);
+
   // Configuración de Boludeo Personalizado
   const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
   const [setupColor1, setSetupColor1] = useState('#ff0055');
@@ -1704,14 +1717,14 @@ function App() {
           <div>
             {/* Diario y humor del Top 3 */}
             {dailyMessages && (
-              <div className="glass-card mb-4 animate-fade-in" style={{ borderLeft: '4px solid var(--primary-gold)', background: 'rgba(255, 215, 0, 0.02)' }}>
+              <div className="glass-card mb-4 animate-fade-in" style={{ borderLeft: '4px solid var(--primary-gold)', background: 'var(--glass-bg)', boxShadow: '0 0 15px var(--primary-gold-glow)' }}>
                 <h3 style={{ color: 'var(--primary-gold)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   📢 El Diario del Prode - Ganadores del Día
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
-                  <p style={{ fontStyle: 'italic' }}>{dailyMessages.first}</p>
-                  <p style={{ fontStyle: 'italic' }}>{dailyMessages.second}</p>
-                  <p style={{ fontStyle: 'italic', color: '#ff8888' }}>{dailyMessages.third}</p>
+                  <p style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>{dailyMessages.first}</p>
+                  <p style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>{dailyMessages.second}</p>
+                  <p style={{ fontStyle: 'italic', color: '#e53e3e', fontWeight: 500 }}>{dailyMessages.third}</p>
                 </div>
               </div>
             )}
