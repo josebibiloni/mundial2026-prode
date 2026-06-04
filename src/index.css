@@ -278,12 +278,11 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--glass-border-hover);
 }
 
-/* Tabs */
 .tabs-navigation {
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--glass-bg);
   padding: 0.35rem;
   border-radius: 9999px;
   border: 1px solid var(--glass-border);
@@ -543,7 +542,7 @@ h1, h2, h3, h4, h5, h6 {
     border-left: none;
     border-right: none;
     border-bottom: none;
-    background: rgba(10, 15, 29, 0.95);
+    background: var(--glass-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     z-index: 1000;
