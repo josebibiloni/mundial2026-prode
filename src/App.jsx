@@ -60,6 +60,15 @@ function App() {
   const [welcomePopupMessage, setWelcomePopupMessage] = useState('');
   const [boludeoCooldown, setBoludeoCooldown] = useState(0); // Temporizador de cooldown
 
+  // Duelos y Desafíos Pre-Mundial (Piedra, Papel o Tijera)
+  const [duels, setDuels] = useState([]);
+  const [opponentSearch, setOpponentSearch] = useState('');
+  const [duelMove, setDuelMove] = useState('rock'); // 'rock' | 'paper' | 'scissors'
+  const [duelChicana, setDuelChicana] = useState('');
+  const [replyMove, setReplyMove] = useState('rock');
+  const [replyChicana, setReplyChicana] = useState('');
+  const [selectedReplyDuel, setSelectedReplyDuel] = useState(null);
+
   // Configuración de Boludeo Personalizado
   const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
   const [setupColor1, setSetupColor1] = useState('#ff0055');
@@ -422,6 +431,196 @@ function App() {
     }
   };
 
+  const loadDuelsForTenant = async (tenantId) => {
+    let loadedDuels = [];
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('mini_duels')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          loadedDuels = data;
+        } else {
+          const localStr = localStorage.getItem(`local_duels_${tenantId}`);
+          if (localStr) loadedDuels = JSON.parse(localStr);
+        }
+      } catch (err) {
+        const localStr = localStorage.getItem(`local_duels_${tenantId}`);
+        if (localStr) loadedDuels = JSON.parse(localStr);
+      }
+    } else {
+      const localStr = localStorage.getItem(`local_duels_${tenantId}`);
+      if (localStr) loadedDuels = JSON.parse(localStr);
+    }
+    setDuels(loadedDuels);
+  };
+
+  const handleLaunchDuel = async (e) => {
+    e.preventDefault();
+    if (!currentUser || !currentTenant || !opponentSearch) {
+      alert('Por favor, selecciona un oponente válido.');
+      return;
+    }
+
+    const newDuel = {
+      tenant_id: currentTenant.id,
+      challenger_username: currentUser.username,
+      opponent_username: opponentSearch,
+      challenger_move: duelMove,
+      challenger_message: duelChicana,
+      opponent_move: null,
+      opponent_message: null,
+      status: 'pending',
+      winner_username: null
+    };
+
+    let savedRemote = false;
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('mini_duels')
+          .insert(newDuel)
+          .select();
+        
+        if (!error && data && data.length > 0) {
+          savedRemote = true;
+          setDuelChicana('');
+          alert(`⚔️ ¡Desafío enviado con éxito a ${opponentSearch}!`);
+          await loadDuelsForTenant(currentTenant.id);
+        }
+      } catch (err) {
+        console.warn('Fallando a simulación local...', err);
+      }
+    }
+
+    if (!savedRemote) {
+      // Simulación inmediata local con bot si el oponente no es real, o si falta la tabla SQL
+      const opponentMove = ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+      
+      let winner = null;
+      if (duelMove === opponentMove) {
+        winner = 'draw';
+      } else if (
+        (duelMove === 'rock' && opponentMove === 'scissors') ||
+        (duelMove === 'paper' && opponentMove === 'rock') ||
+        (duelMove === 'scissors' && opponentMove === 'paper')
+      ) {
+        winner = currentUser.username;
+      } else {
+        winner = opponentSearch;
+      }
+
+      let oppMsg = '';
+      if (winner === 'draw') {
+        oppMsg = "Empatamos de milagro... La próxima te saco a pasear.";
+      } else if (winner === opponentSearch) {
+        const msgs = [
+          "¡Te recontra pasé el trapo! Dedicate a otra cosa.",
+          "Fácil. Te gané usando la mente. Sos malísimo.",
+          "Chau, patadura. Seguí participando."
+        ];
+        oppMsg = msgs[Math.floor(Math.random() * msgs.length)];
+      } else {
+        const msgs = [
+          "Tuviste suerte. La próxima te corto la racha.",
+          "Hiciste trampa, no me podés ganar así.",
+          "Bueno, zafaste. Pero en el Prode real quedás último."
+        ];
+        oppMsg = msgs[Math.floor(Math.random() * msgs.length)];
+      }
+
+      const localDuel = {
+        ...newDuel,
+        id: 'local_' + Date.now(),
+        opponent_move: opponentMove,
+        opponent_message: oppMsg,
+        status: 'completed',
+        winner_username: winner === 'draw' ? null : winner,
+        created_at: new Date().toISOString()
+      };
+
+      const currentLocal = localStorage.getItem(`local_duels_${currentTenant.id}`);
+      const duelsList = currentLocal ? JSON.parse(currentLocal) : [];
+      duelsList.unshift(localDuel);
+      localStorage.setItem(`local_duels_${currentTenant.id}`, JSON.stringify(duelsList));
+
+      setDuelChicana('');
+      setDuels(duelsList);
+      
+      alert(`💡 La tabla 'mini_duels' no existe en Supabase todavía. Simulando respuesta inmediata del oponente:\n\n${opponentSearch} eligió ${opponentMove === 'rock' ? '🪨 Piedra' : opponentMove === 'paper' ? '📄 Papel' : '✂️ Tijera'}.\nResultado: ${winner === 'draw' ? 'Empate' : 'Ganador: ' + winner}\n"${oppMsg}"`);
+    }
+  };
+
+  const handleReplyDuel = async (e) => {
+    e.preventDefault();
+    if (!selectedReplyDuel || !currentUser || !currentTenant) return;
+
+    const challenger_move = selectedReplyDuel.challenger_move;
+    const opponent_move = replyMove;
+    
+    let winner = null;
+    if (challenger_move === opponent_move) {
+      winner = 'draw';
+    } else if (
+      (challenger_move === 'rock' && opponent_move === 'scissors') ||
+      (challenger_move === 'paper' && opponent_move === 'rock') ||
+      (challenger_move === 'scissors' && opponent_move === 'paper')
+    ) {
+      winner = selectedReplyDuel.challenger_username;
+    } else {
+      winner = currentUser.username;
+    }
+
+    let updatedRemote = false;
+    if (isSupabaseConnected && supabase && !selectedReplyDuel.id.toString().startsWith('local_')) {
+      try {
+        const { error } = await supabase
+          .from('mini_duels')
+          .update({
+            opponent_move: replyMove,
+            opponent_message: replyChicana,
+            status: 'completed',
+            winner_username: winner === 'draw' ? null : winner
+          })
+          .eq('id', selectedReplyDuel.id);
+        
+        if (!error) {
+          updatedRemote = true;
+          alert('⚔️ ¡Desafío respondido con éxito!');
+          setSelectedReplyDuel(null);
+          setReplyChicana('');
+          await loadDuelsForTenant(currentTenant.id);
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+
+    if (!updatedRemote) {
+      const currentLocal = localStorage.getItem(`local_duels_${currentTenant.id}`);
+      if (currentLocal) {
+        const duelsList = JSON.parse(currentLocal);
+        const idx = duelsList.findIndex(d => d.id === selectedReplyDuel.id);
+        if (idx !== -1) {
+          duelsList[idx] = {
+            ...duelsList[idx],
+            opponent_move: replyMove,
+            opponent_message: replyChicana,
+            status: 'completed',
+            winner_username: winner === 'draw' ? null : winner
+          };
+          localStorage.setItem(`local_duels_${currentTenant.id}`, JSON.stringify(duelsList));
+          setDuels(duelsList);
+        }
+      }
+      alert('⚔️ ¡Desafío respondido con éxito (Local)!');
+      setSelectedReplyDuel(null);
+      setReplyChicana('');
+    }
+  };
+
   // Reglas de puntuación
   const calculatePoints = (pred, actual) => {
     if (actual.status !== 'played' || actual.actualScoreA === null || actual.actualScoreB === null) {
@@ -477,6 +676,10 @@ function App() {
           }
         }
       });
+
+      // Sumar +2 puntos de bonificación en la general por cada duelo ganado
+      const userDuelsWon = duels.filter(d => d.winner_username === user.username && d.status === 'completed').length;
+      totalPoints += (userDuelsWon * 2);
 
       return {
         id: user.id,
@@ -627,6 +830,7 @@ function App() {
 
           setCurrentUser(loggedUser);
           await loadParticipantsForTenant(currentTenant.id);
+          await loadDuelsForTenant(currentTenant.id);
           
           const randomIdx = Math.floor(Math.random() * welcomeBanterPhrases.length);
           setWelcomePopupMessage(welcomeBanterPhrases[randomIdx]);
@@ -675,6 +879,7 @@ function App() {
     setSetupPhrase(found.mystic_phrase || '');
 
     setCurrentUser(loggedUser);
+    await loadDuelsForTenant(currentTenant.id);
     
     // Disparar popup de bienvenida ácida en Login
     const randomIdx = Math.floor(Math.random() * welcomeBanterPhrases.length);
@@ -1922,6 +2127,208 @@ function App() {
               </div>
             )}
 
+            {/* PESTAÑA: Desafíos Pre-Mundial (Piedra, Papel o Tijera) */}
+            {activeTab === 'duels' && (
+              <div className="glass-card">
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ⚔️ Arena de Duelos Pre-Mundial
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                  ¿Aburrido esperando el mundial? Desafía a tus amigos a <strong>Piedra, Papel o Tijera</strong>. 
+                  ¡Cada duelo ganado suma <strong>+2 puntos</strong> en la Tabla General de posiciones!
+                </p>
+
+                {/* Sección Desafíos Pendientes por responder */}
+                {(() => {
+                  const pendingToMe = duels.filter(d => d.opponent_username === currentUser.username && d.status === 'pending');
+                  if (pendingToMe.length === 0) return null;
+                  return (
+                    <div className="glass-card mb-4 animate-fade-in" style={{ borderLeft: '4px solid #ff4d4d', background: 'rgba(255, 77, 77, 0.03)' }}>
+                      <h4 style={{ color: '#ff4d4d', marginBottom: '0.75rem', fontWeight: 'bold' }}>
+                        🚨 Tienes {pendingToMe.length} {pendingToMe.length === 1 ? 'Desafío Pendiente' : 'Desafíos Pendientes'}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {pendingToMe.map(d => (
+                          <div key={d.id} style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              <span><strong>{d.challenger_username}</strong> te desafió a un duelo.</span>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(d.created_at || Date.now()).toLocaleDateString()}</span>
+                            </div>
+                            {d.challenger_message && (
+                              <p style={{ fontStyle: 'italic', color: '#ffb703', margin: '0.5rem 0', fontSize: '0.9rem' }}>
+                                "{d.challenger_message}"
+                              </p>
+                            )}
+
+                            {selectedReplyDuel?.id === d.id ? (
+                              <form onSubmit={handleReplyDuel} style={{ marginTop: '1rem', background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '8px' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>ELIGE TU MOVIMIENTO:</label>
+                                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                                  <button type="button" className={`btn-secondary ${replyMove === 'rock' ? 'active' : ''}`} onClick={() => setReplyMove('rock')} style={{ flex: 1, padding: '0.75rem', borderColor: replyMove === 'rock' ? '#00ff87' : 'var(--glass-border)' }}>
+                                    🪨 Piedra
+                                  </button>
+                                  <button type="button" className={`btn-secondary ${replyMove === 'paper' ? 'active' : ''}`} onClick={() => setReplyMove('paper')} style={{ flex: 1, padding: '0.75rem', borderColor: replyMove === 'paper' ? '#00ff87' : 'var(--glass-border)' }}>
+                                    📄 Papel
+                                  </button>
+                                  <button type="button" className={`btn-secondary ${replyMove === 'scissors' ? 'active' : ''}`} onClick={() => setReplyMove('scissors')} style={{ flex: 1, padding: '0.75rem', borderColor: replyMove === 'scissors' ? '#00ff87' : 'var(--glass-border)' }}>
+                                    ✂️ Tijera
+                                  </button>
+                                </div>
+                                <div className="form-group">
+                                  <label>CONTRACANASTA / MENSAJE ÁCIDO:</label>
+                                  <input type="text" className="form-control" placeholder="Ej. ¡Sos malísimo! Tomá pa que guardes..." value={replyChicana} onChange={(e) => setReplyChicana(e.target.value)} />
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button type="submit" className="btn-primary" style={{ width: 'auto', background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)' }}>
+                                    ⚔️ ¡JUGAR!
+                                  </button>
+                                  <button type="button" className="btn-secondary" onClick={() => setSelectedReplyDuel(null)} style={{ width: 'auto' }}>
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <button className="btn-primary" onClick={() => { setSelectedReplyDuel(d); setReplyMove('rock'); }} style={{ width: 'auto', marginTop: '0.5rem', padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                                ⚔️ Responder Desafío
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '1.5rem' }}>
+                  {/* Formulario para Crear Duelo */}
+                  <div className="glass-card" style={{ flex: '1 1 320px', background: 'rgba(255,255,255,0.01)' }}>
+                    <h3 style={{ fontSize: '1.15rem', color: '#ffb703', marginBottom: '1.25rem', fontWeight: 'bold' }}>
+                      ⚔️ Lanzar Nuevo Desafío
+                    </h3>
+                    <form onSubmit={handleLaunchDuel}>
+                      <div className="form-group">
+                        <label>Elegir Oponente</label>
+                        <select 
+                          className="form-control"
+                          value={opponentSearch} 
+                          onChange={(e) => setOpponentSearch(e.target.value)}
+                          required
+                        >
+                          <option value="">-- Selecciona un oponente --</option>
+                          {participants.filter(p => p.username !== currentUser.username).map(p => (
+                            <option key={p.id} value={p.username}>{p.username} ({p.full_name || p.username})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Tu Movimiento</label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button type="button" className={`btn-secondary ${duelMove === 'rock' ? 'active' : ''}`} onClick={() => setDuelMove('rock')} style={{ flex: 1, padding: '0.75rem', borderColor: duelMove === 'rock' ? '#ffb703' : 'var(--glass-border)' }}>
+                            🪨 Piedra
+                          </button>
+                          <button type="button" className={`btn-secondary ${duelMove === 'paper' ? 'active' : ''}`} onClick={() => setDuelMove('paper')} style={{ flex: 1, padding: '0.75rem', borderColor: duelMove === 'paper' ? '#ffb703' : 'var(--glass-border)' }}>
+                            📄 Papel
+                          </button>
+                          <button type="button" className={`btn-secondary ${duelMove === 'scissors' ? 'active' : ''}`} onClick={() => setDuelMove('scissors')} style={{ flex: 1, padding: '0.75rem', borderColor: duelMove === 'scissors' ? '#ffb703' : 'var(--glass-border)' }}>
+                            ✂️ Tijera
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Mensaje Ácido / Chicana</label>
+                        <input 
+                          type="text" 
+                          className="form-control"
+                          placeholder="Ej. Vas a morder el polvo, patadura..."
+                          value={duelChicana}
+                          onChange={(e) => setDuelChicana(e.target.value)}
+                        />
+                      </div>
+
+                      <button type="submit" className="btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, #ffb703, #ff4d4d)', fontWeight: 'bold' }}>
+                        🔥 ENVIAR DUELO
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Historial de Duelos del Grupo */}
+                  <div className="glass-card" style={{ flex: '1 1 380px', maxHeight: '420px', overflowY: 'auto' }}>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--accent-color)', marginBottom: '1rem', fontWeight: 'bold' }}>
+                      📋 Historial de Duelos
+                    </h3>
+                    {duels.length === 0 ? (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Aún no se han jugado duelos en este grupo.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {duels.map(d => {
+                          const isCompleted = d.status === 'completed';
+                          const isDraw = isCompleted && !d.winner_username;
+                          const isIWinner = isCompleted && d.winner_username === currentUser.username;
+                          const isILoser = isCompleted && d.winner_username && d.winner_username !== currentUser.username && (d.challenger_username === currentUser.username || d.opponent_username === currentUser.username);
+                          
+                          let badgeBg = 'rgba(255,255,255,0.05)';
+                          let badgeText = 'Pendiente';
+                          let badgeColor = 'var(--text-secondary)';
+
+                          if (isCompleted) {
+                            if (isDraw) {
+                              badgeBg = 'rgba(255, 183, 3, 0.1)';
+                              badgeText = 'Empate';
+                              badgeColor = '#ffb703';
+                            } else {
+                              badgeBg = 'rgba(0, 255, 135, 0.1)';
+                              badgeText = `Ganó ${d.winner_username}`;
+                              badgeColor = '#00ff87';
+                            }
+                          }
+
+                          return (
+                            <div key={d.id} style={{ 
+                              background: 'rgba(0,0,0,0.2)', 
+                              padding: '0.85rem', 
+                              borderRadius: '8px',
+                              border: isIWinner ? '1px solid rgba(0, 255, 135, 0.2)' : isILoser ? '1px solid rgba(255, 77, 77, 0.2)' : '1px solid rgba(255,255,255,0.03)' 
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                  ⚔️ {d.challenger_username} vs {d.opponent_username}
+                                </span>
+                                <span style={{ 
+                                  fontSize: '0.75rem', 
+                                  background: badgeBg, 
+                                  color: badgeColor, 
+                                  padding: '0.2rem 0.5rem', 
+                                  borderRadius: '4px',
+                                  fontWeight: 'bold'
+                                }}>
+                                  {badgeText}
+                                </span>
+                              </div>
+
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <div>
+                                  💬 {d.challenger_username}: "{d.challenger_message || '...'}" 
+                                  {isCompleted && ` (${d.challenger_move === 'rock' ? '🪨' : d.challenger_move === 'paper' ? '📄' : '✂️'})`}
+                                </div>
+                                {isCompleted && (
+                                  <div>
+                                    💬 {d.opponent_username}: "{d.opponent_message || '...'}" 
+                                    {` (${d.opponent_move === 'rock' ? '🪨' : d.opponent_move === 'paper' ? '📄' : '✂️'})`}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Banner de Test Boludeo */}
             <div className="glass-card mb-4" style={{ 
               display: 'flex', 
@@ -2091,6 +2498,9 @@ function App() {
               </button>
               <button className={`tab-btn ${activeTab === 'friends' ? 'active' : ''}`} onClick={() => setActiveTab('friends')}>
                 👥 Ver Amigos
+              </button>
+              <button className={`tab-btn ${activeTab === 'duels' ? 'active' : ''}`} onClick={() => setActiveTab('duels')}>
+                ⚔️ Duelos Pre-Mundial
               </button>
               <button className={`tab-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
                 ⚙️ Resultados Reales
