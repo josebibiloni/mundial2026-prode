@@ -2207,19 +2207,40 @@ function App() {
                     </h3>
                     <form onSubmit={handleLaunchDuel}>
                       <div className="form-group">
-                        <label>Elegir Oponente</label>
-                        <select 
-                          className="form-control"
-                          value={opponentSearch} 
-                          onChange={(e) => setOpponentSearch(e.target.value)}
-                          required
-                        >
-                          <option value="">-- Selecciona un oponente --</option>
-                          {participants.filter(p => p.username !== currentUser.username).map(p => (
-                            <option key={p.id} value={p.username}>{p.username} ({p.full_name || p.username})</option>
-                          ))}
-                        </select>
+                        <label>Tipo de Desafío</label>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                          <button type="button" className={`btn-secondary ${!isRandomOpponent ? 'active' : ''}`} onClick={() => { setIsRandomOpponent(false); setOpponentSearch(''); }} style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem', borderColor: !isRandomOpponent ? '#ffb703' : 'var(--glass-border)' }}>
+                            🎯 Dirigido
+                          </button>
+                          <button type="button" className={`btn-secondary ${isRandomOpponent ? 'active' : ''}`} onClick={() => { setIsRandomOpponent(true); setOpponentSearch('Al Azar 🎲'); }} style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem', borderColor: isRandomOpponent ? '#ffb703' : 'var(--glass-border)' }}>
+                            🎲 Al Azar
+                          </button>
+                        </div>
                       </div>
+
+                      {!isRandomOpponent && (
+                        <div className="form-group">
+                          <label>Elegir Oponente</label>
+                          <select 
+                            className="form-control"
+                            value={opponentSearch} 
+                            onChange={(e) => setOpponentSearch(e.target.value)}
+                            required
+                          >
+                            <option value="">-- Selecciona un oponente --</option>
+                            {participants.filter(p => p.username !== currentUser.username).map(p => (
+                              <option key={p.id} value={p.username}>{p.username} ({p.full_name || p.username})</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {isRandomOpponent && (
+                        <div className="form-group">
+                          <label>Oponente Seleccionado</label>
+                          <input type="text" className="form-control" value="Oponente sorpresa al azar 🎲" readOnly style={{ background: 'rgba(0,0,0,0.3)', color: '#ffb703', fontWeight: 'bold' }} />
+                        </div>
+                      )}
 
                       <div className="form-group">
                         <label>Tu Movimiento</label>
@@ -2237,24 +2258,33 @@ function App() {
                       </div>
 
                       <div className="form-group">
-                        <label>Mensaje Ácido / Chicana</label>
-                        <input 
-                          type="text" 
-                          className="form-control"
-                          placeholder="Ej. Vas a morder el polvo, patadura..."
-                          value={duelChicana}
-                          onChange={(e) => setDuelChicana(e.target.value)}
-                        />
+                        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Mensaje de Chicana (Generado por Sistema)</span>
+                          <button type="button" onClick={refreshSystemDuelPhrase} style={{ background: 'none', border: 'none', color: '#60efff', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>
+                            🔄 Cambiar
+                          </button>
+                        </label>
+                        <div style={{ 
+                          background: 'rgba(0,0,0,0.4)', 
+                          padding: '0.75rem 1rem', 
+                          borderRadius: '8px', 
+                          border: '1px solid var(--glass-border)',
+                          fontSize: '0.9rem',
+                          fontStyle: 'italic',
+                          color: '#ffb703'
+                        }}>
+                          "{systemDuelPhrase || 'Pensando una chicana...'}"
+                        </div>
                       </div>
 
                       <button type="submit" className="btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, #ffb703, #ff4d4d)', fontWeight: 'bold' }}>
-                        🔥 ENVIAR DUELO
+                        ⚔️ ENVIAR DUELO
                       </button>
                     </form>
                   </div>
 
                   {/* Historial de Duelos del Grupo */}
-                  <div className="glass-card" style={{ flex: '1 1 380px', maxHeight: '420px', overflowY: 'auto' }}>
+                  <div className="glass-card" style={{ flex: '1 1 380px', maxHeight: '450px', overflowY: 'auto' }}>
                     <h3 style={{ fontSize: '1.15rem', color: 'var(--accent-color)', marginBottom: '1rem', fontWeight: 'bold' }}>
                       📋 Historial de Duelos
                     </h3>
@@ -2278,9 +2308,9 @@ function App() {
                               badgeText = 'Empate';
                               badgeColor = '#ffb703';
                             } else {
-                              badgeBg = 'rgba(0, 255, 135, 0.1)';
-                              badgeText = `Ganó ${d.winner_username}`;
-                              badgeColor = '#00ff87';
+                              badgeBg = isIWinner ? 'rgba(0, 255, 135, 0.1)' : 'rgba(255, 77, 77, 0.1)';
+                              badgeText = isIWinner ? 'Ganaste 🎉' : `Ganó ${d.winner_username}`;
+                              badgeColor = isIWinner ? '#00ff87' : '#ff4d4d';
                             }
                           }
 
@@ -2318,6 +2348,41 @@ function App() {
                                     {` (${d.opponent_move === 'rock' ? '🪨' : d.opponent_move === 'paper' ? '📄' : '✂️'})`}
                                   </div>
                                 )}
+                                
+                                {isCompleted && d.loser_response && (
+                                  <div style={{ 
+                                    background: 'rgba(255,255,255,0.03)', 
+                                    padding: '0.4rem 0.6rem', 
+                                    borderRadius: '4px', 
+                                    marginTop: '0.4rem',
+                                    borderLeft: '3px solid #ff4d4d',
+                                    color: '#fff',
+                                    fontSize: '0.82rem'
+                                  }}>
+                                    <strong>Descargo del Perdedor:</strong> "{d.loser_response}"
+                                  </div>
+                                )}
+
+                                {isILoser && !d.loser_response && (
+                                  <form onSubmit={(e) => {
+                                    const inputVal = e.target.elements.respText.value;
+                                    handleSendLoserResponse(e, d.id, inputVal);
+                                    e.target.elements.respText.value = '';
+                                  }} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <input 
+                                      type="text" 
+                                      name="respText"
+                                      maxLength={200}
+                                      className="form-control"
+                                      placeholder="Mete excusa de perdedor (máx 200 car.)..." 
+                                      required 
+                                      style={{ height: '30px', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                                    />
+                                    <button className="btn-primary" style={{ width: 'auto', height: '30px', padding: '0 0.75rem', fontSize: '0.75rem', background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)' }}>
+                                      Enviar
+                                    </button>
+                                  </form>
+                                )}
                               </div>
                             </div>
                           );
@@ -2325,6 +2390,93 @@ function App() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* HISTÓRICO DE MENSAJES (Muro de Descargos de Perdedores) */}
+                <div className="glass-card mb-4" style={{ marginTop: '2rem', background: 'rgba(255, 255, 255, 0.01)' }}>
+                  <h3 style={{ fontSize: '1.25rem', color: '#ffb703', marginBottom: '1rem', fontWeight: 'bold' }}>
+                    💬 Histórico de Mensajes y Descargos
+                  </h3>
+                  {(() => {
+                    const myMessages = duels.filter(d => 
+                      d.status === 'completed' && 
+                      d.loser_response && 
+                      (d.challenger_username === currentUser.username || d.opponent_username === currentUser.username)
+                    );
+                    if (myMessages.length === 0) {
+                      return <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No tienes descargos enviados ni recibidos todavía.</p>;
+                    }
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                        {myMessages.map(d => {
+                          const isSentByMe = (d.winner_username !== currentUser.username);
+                          const recipient = isSentByMe ? d.winner_username : (d.challenger_username === currentUser.username ? d.opponent_username : d.challenger_username);
+                          return (
+                            <div key={d.id} style={{ 
+                              background: 'rgba(0,0,0,0.3)', 
+                              padding: '1rem', 
+                              borderRadius: '8px', 
+                              borderLeft: isSentByMe ? '4px solid #ff4d4d' : '4px solid #00ff87',
+                              border: '1px solid rgba(255,255,255,0.04)'
+                            }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{isSentByMe ? '⬆️ Enviado a: ' + recipient : '⬇️ Recibido de: ' + recipient}</span>
+                                <span>{new Date(d.created_at || Date.now()).toLocaleDateString()}</span>
+                              </div>
+                              <p style={{ margin: 0, fontSize: '0.9rem', color: 'white', fontStyle: 'italic', fontWeight: 500 }}>
+                                "{d.loser_response}"
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* MODAL LOSER RESPONSE POPUP (Modal inmediato cuando perdés localmente) */}
+            {showLoserResponseModal && (
+              <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 2005, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #ff4d4d', animation: 'float 0.5s ease-out', maxWidth: '460px', width: '90%', padding: '2rem' }}>
+                  <span style={{ fontSize: '3.5rem' }}>😭</span>
+                  <h2 style={{ marginTop: '1rem', color: '#ff4d4d', fontSize: '1.6rem' }}>¡PERDISTE EL DUELO!</h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '0.5rem 0' }}>
+                    Como perdedor, tienes derecho a mandar tu descargo (máx 200 caracteres):
+                  </p>
+                  
+                  <form onSubmit={(e) => handleSendLoserResponse(e, activeLosingDuelId, loserResponseText)} style={{ marginTop: '1rem' }}>
+                    <div className="form-group">
+                      <textarea 
+                        className="form-control" 
+                        maxLength={200}
+                        rows={3}
+                        required
+                        placeholder="Ej. Tuviste suerte, patadura. La pelota no dobla..."
+                        value={loserResponseText}
+                        onChange={(e) => setLoserResponseText(e.target.value)}
+                        style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid var(--glass-border)', padding: '0.75rem', width: '100%', resize: 'none' }}
+                      />
+                      <small style={{ color: 'var(--text-secondary)', display: 'block', textAlign: 'right', marginTop: '0.25rem' }}>
+                        {loserResponseText.length}/200 caracteres
+                      </small>
+                    </div>
+                    
+                    <button 
+                      type="submit" 
+                      className="btn-primary" 
+                      style={{ 
+                        marginTop: '1rem', 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        fontWeight: 'bold',
+                        background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)'
+                      }}
+                    >
+                      Enviar Descargo Humillante 🚀
+                    </button>
+                  </form>
                 </div>
               </div>
             )}
