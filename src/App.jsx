@@ -1337,12 +1337,12 @@ function App() {
         </div>
       )}
 
-      {/* MODAL WELCOME POPUP (Mensaje ácido de bienvenida al registrarse) */}
+       {/* MODAL WELCOME POPUP (Mensaje ácido de bienvenida al registrarse) */}
       {showWelcomePopup && (
         <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 2005, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #00ff87', animation: 'float 0.5s ease-out', maxWidth: '480px', width: '90%', padding: '2rem' }}>
-            <span style={{ fontSize: '3.5rem' }}>🤡</span>
-            <h2 style={{ marginTop: '1rem', color: '#00ff87', fontSize: '1.75rem' }}>¡BIENVENIDO, PATADURA!</h2>
+          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid var(--accent-color)', animation: 'float 0.5s ease-out', maxWidth: '480px', width: '90%', padding: '2rem' }}>
+            <span style={{ fontSize: '3.5rem' }}>⚽❤️</span>
+            <h2 style={{ marginTop: '1rem', color: 'var(--accent-color)', fontSize: '1.75rem', fontWeight: 'bold' }}>¡BIENVENIDO, PATADURA!</h2>
             <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
               Te registraste en: {currentTenant?.name}
             </h4>
@@ -1358,9 +1358,6 @@ function App() {
                   padding: '0.75rem 1.5rem', 
                   fontSize: '1rem',
                   fontWeight: 'bold',
-                  background: 'linear-gradient(135deg, #00ff87, #60efff)',
-                  border: 'none',
-                  color: '#000',
                   cursor: 'pointer'
                 }}
               >
