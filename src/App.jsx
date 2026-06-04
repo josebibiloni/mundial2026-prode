@@ -70,23 +70,9 @@ function App() {
   const [replyChicana, setReplyChicana] = useState('');
   const [selectedReplyDuel, setSelectedReplyDuel] = useState(null);
   const [isRandomOpponent, setIsRandomOpponent] = useState(false);
-  const [systemDuelPhrase, setSystemDuelPhrase] = useState('');
   const [activeLosingDuelId, setActiveLosingDuelId] = useState(null);
   const [loserResponseText, setLoserResponseText] = useState('');
   const [showLoserResponseModal, setShowLoserResponseModal] = useState(false);
-
-  const refreshSystemDuelPhrase = () => {
-    if (banterPhrases && banterPhrases.length > 0) {
-      const randomIdx = Math.floor(Math.random() * banterPhrases.length);
-      setSystemDuelPhrase(banterPhrases[randomIdx]);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'duels') {
-      refreshSystemDuelPhrase();
-    }
-  }, [activeTab]);
 
   // Configuración de Boludeo Personalizado
   const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
@@ -508,12 +494,16 @@ function App() {
       return;
     }
 
+    // Seleccionar una chicana al azar de forma automática por el sistema
+    const randomIdx = Math.floor(Math.random() * banterPhrases.length);
+    const chosenChicana = banterPhrases[randomIdx];
+
     const newDuel = {
       tenant_id: currentTenant.id,
       challenger_username: currentUser.username,
       opponent_username: opponentSearch,
       challenger_move: duelMove,
-      challenger_message: duelChicana,
+      challenger_message: chosenChicana,
       opponent_move: null,
       opponent_message: null,
       status: 'pending',
@@ -530,7 +520,6 @@ function App() {
         
         if (!error && data && data.length > 0) {
           savedRemote = true;
-          setDuelChicana('');
           alert(`⚔️ ¡Desafío enviado con éxito a ${opponentSearch}!`);
           await loadDuelsForTenant(currentTenant.id);
         }
@@ -590,7 +579,6 @@ function App() {
       duelsList.unshift(localDuel);
       localStorage.setItem(`local_duels_${currentTenant.id}`, JSON.stringify(duelsList));
 
-      setDuelChicana('');
       setDuels(duelsList);
       
       alert(`💡 La tabla 'mini_duels' no existe en Supabase todavía. Simulando respuesta inmediata del oponente:\n\n${opponentSearch} eligió ${opponentMove === 'rock' ? '🪨 Piedra' : opponentMove === 'paper' ? '📄 Papel' : '✂️ Tijera'}.\nResultado: ${winner === 'draw' ? 'Empate' : 'Ganador: ' + winner}\n"${oppMsg}"`);
@@ -2542,27 +2530,7 @@ function App() {
                         </div>
                       </div>
 
-                      <div className="form-group">
-                        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>Mensaje de Chicana (Generado por Sistema)</span>
-                          <button type="button" onClick={refreshSystemDuelPhrase} style={{ background: 'none', border: 'none', color: '#60efff', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>
-                            🔄 Cambiar
-                          </button>
-                        </label>
-                        <div style={{ 
-                          background: 'rgba(0,0,0,0.4)', 
-                          padding: '0.75rem 1rem', 
-                          borderRadius: '8px', 
-                          border: '1px solid var(--glass-border)',
-                          fontSize: '0.9rem',
-                          fontStyle: 'italic',
-                          color: '#ffb703'
-                        }}>
-                          "{systemDuelPhrase || 'Pensando una chicana...'}"
-                        </div>
-                      </div>
-
-                      <button type="submit" className="btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, #ffb703, #ff4d4d)', fontWeight: 'bold' }}>
+                      <button type="submit" className="btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, #ffb703, #ff4d4d)', fontWeight: 'bold', marginTop: '1.5rem' }}>
                         ⚔️ ENVIAR DUELO
                       </button>
                     </form>
