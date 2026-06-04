@@ -13,6 +13,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('predictions'); // 'predictions' | 'leaderboard' | 'friends' | 'admin'
   const [selectedFriendId, setSelectedFriendId] = useState(''); // ID del amigo a consultar
   const [comparisonUserId, setComparisonUserId] = useState(''); // ID para comparar resultados reales
+  const [selectedDetailedMatchId, setSelectedDetailedMatchId] = useState(''); // ID del partido a detallar en tabla general
 
   // Paginación de partidos
   const [selectedGroupFilter, setSelectedGroupFilter] = useState('Todos');
@@ -1602,6 +1603,125 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Sección de Desglose de Puntos por Partido Jugado */}
+                {(() => {
+                  const playedMatches = matches.filter(m => m.status === 'played');
+                  if (playedMatches.length === 0) {
+                    return (
+                      <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-color)', marginBottom: '0.75rem' }}>📊 Puntos Obtenidos por Partido</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                          Los desgloses de predicciones y puntos por partido aparecerán aquí tan pronto como comiencen a jugarse los partidos reales del mundial.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  const activeMatchId = selectedDetailedMatchId || playedMatches[0]?.id || '';
+                  const selectedMatch = playedMatches.find(m => m.id === parseInt(activeMatchId)) || playedMatches[0] || null;
+
+                  if (!selectedMatch) return null;
+
+                  const breakdownRows = participants.map(user => {
+                    const userPreds = predictions[`${currentTenant.id}_${user.id}`] || predictions[`${currentTenant.id}_${(user.username || '').trim()}`] || {};
+                    const pred = userPreds[selectedMatch.id] || null;
+                    const pts = calculatePoints(pred, selectedMatch);
+                    return {
+                      id: user.id,
+                      username: user.username,
+                      fullName: user.full_name,
+                      pred,
+                      points: pts
+                    };
+                  }).sort((a, b) => {
+                    if (b.points !== a.points) return b.points - a.points;
+                    return (a.username || '').localeCompare(b.username || '');
+                  });
+
+                  return (
+                    <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
+                      <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-color)', marginBottom: '1rem' }}>📊 Puntos Obtenidos por Partido</h3>
+                      
+                      <div className="form-group" style={{ maxWidth: '320px', marginBottom: '1.5rem' }}>
+                        <label style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Seleccionar Partido Jugado</label>
+                        <select 
+                          className="form-control"
+                          value={selectedMatch.id}
+                          onChange={(e) => setSelectedDetailedMatchId(e.target.value)}
+                          style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff', height: '38px' }}
+                        >
+                          {playedMatches.map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.group} • {m.teamA} vs {m.teamB}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Tarjeta de Marcador Oficial */}
+                      <div className="glass-card text-center animate-fade-in" style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', marginBottom: '1.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{selectedMatch.group} • Marcador Oficial</div>
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', marginTop: '0.5rem' }}>
+                          <span style={{ fontSize: '1.1rem' }}>{selectedMatch.flagA} <strong>{selectedMatch.teamA}</strong></span>
+                          <span style={{ fontSize: '1.6rem', fontWeight: 'bold', color: 'var(--accent-color)', padding: '0 0.5rem', background: 'rgba(0, 255, 135, 0.05)', borderRadius: '6px' }}>
+                            {selectedMatch.actualScoreA} - {selectedMatch.actualScoreB}
+                          </span>
+                          <span style={{ fontSize: '1.1rem' }}><strong>{selectedMatch.teamB}</strong> {selectedMatch.flagB}</span>
+                        </div>
+                      </div>
+
+                      {/* Tabla Desglose */}
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="leaderboard-table" style={{ fontSize: '0.9rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Pos</th>
+                              <th>Participante</th>
+                              <th style={{ textAlign: 'center' }}>Predicción</th>
+                              <th style={{ textAlign: 'right' }}>Puntos Sumados</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {breakdownRows.map((row, idx) => {
+                              const isCurrentUser = row.id === currentUser?.id;
+                              const pts = row.points;
+                              
+                              const badgeStyle = pts === 7 
+                                ? { background: 'rgba(0, 255, 135, 0.15)', color: 'var(--accent-color)', border: '1px solid var(--accent-color)' }
+                                : pts >= 3
+                                  ? { background: 'rgba(96, 239, 255, 0.15)', color: '#60efff', border: '1px solid #60efff' }
+                                  : { background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', border: '1px solid rgba(255,255,255,0.05)' };
+
+                              return (
+                                <tr key={row.id} className="leaderboard-row" style={{ background: isCurrentUser ? 'rgba(0, 255, 135, 0.04)' : 'transparent' }}>
+                                  <td className="rank-cell" style={{ fontWeight: isCurrentUser ? 'bold' : 'normal' }}>{idx + 1}º</td>
+                                  <td>
+                                    <span style={{ fontWeight: isCurrentUser ? 'bold' : 'normal', color: isCurrentUser ? 'var(--accent-color)' : 'white' }}>
+                                      {row.username} {isCurrentUser && ' (Tú)'}
+                                    </span>
+                                  </td>
+                                  <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                                    {row.pred ? (
+                                      <span style={{ color: '#fff' }}>{row.pred.scoreA} - {row.pred.scoreB}</span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-secondary)', fontWeight: 'normal', fontSize: '0.8rem' }}>Sin cargar</span>
+                                    )}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    <span className="points-pill" style={{ padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', ...badgeStyle }}>
+                                      +{pts} pts
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
