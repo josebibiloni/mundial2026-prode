@@ -394,7 +394,7 @@ function App() {
     return ranked.sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       if (b.exactScores !== a.exactScores) return b.exactScores - a.exactScores;
-      return a.username.localeCompare(b.username);
+      return (a.username || '').localeCompare(b.username || '');
     });
   };
 
