@@ -1266,181 +1266,6 @@ function App() {
                 </div>
               </div>
             )}
-
-            {/* Banner de Test Boludeo */}
-            <div className="glass-card mb-4" style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              background: 'linear-gradient(135deg, rgba(255, 77, 77, 0.08), rgba(241, 168, 10, 0.08))', 
-              border: '1px solid rgba(255, 77, 77, 0.3)',
-              padding: '1.25rem',
-              borderRadius: '12px',
-              gap: '1rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ flex: '1 1 250px' }}>
-                  <h4 style={{ color: '#ffb703', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    🔥 Test Boludeo del #1
-                  </h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                    Personaliza tu joda presionando "⚙️ SETUP BOLUDEO" o castiga a todos tus amigos con "💥 ¡BOLUDEAR!".
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <button 
-                    className="btn-secondary" 
-                    onClick={() => setShowSetupBoludeo(!showSetupBoludeo)} 
-                    style={{ 
-                      width: 'auto',
-                      minWidth: '120px',
-                      borderColor: '#ffb703',
-                      color: '#ffb703',
-                      fontWeight: 'bold',
-                      fontSize: '0.95rem',
-                      padding: '0.6rem 1.2rem',
-                      borderRadius: '8px'
-                    }}
-                  >
-                    ⚙️ SETUP BOLUDEO
-                  </button>
-                  <button 
-                    className="btn-primary" 
-                    onClick={async () => {
-                      await handleSaveSetup();
-                      await handleTriggerBoludeo();
-                    }} 
-                    disabled={boludeoCooldown > 0}
-                    style={{ 
-                      width: 'auto', 
-                      minWidth: '130px',
-                      background: boludeoCooldown > 0 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ff4d4d, #f1a80a)', 
-                      border: 'none',
-                      boxShadow: boludeoCooldown > 0 ? 'none' : '0 4px 12px rgba(255, 77, 77, 0.4)',
-                      fontWeight: 'bold',
-                      fontSize: '0.95rem',
-                      padding: '0.6rem 1.2rem',
-                      borderRadius: '8px',
-                      color: boludeoCooldown > 0 ? '#666' : '#fff',
-                      cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {boludeoCooldown > 0 ? `⏳ (${boludeoCooldown}s)` : '💥 ¡BOLUDEAR!'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Panel de Configuración Expandible */}
-              {showSetupBoludeo && (
-                <div className="glass-card animate-fade-in" style={{ padding: '1.25rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', marginTop: '0.5rem' }}>
-                  <h5 style={{ color: '#ffb703', fontSize: '0.95rem', marginBottom: '1rem', fontWeight: 'bold' }}>⚙️ Personalizar mi Boludeo</h5>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Frase Mística de la Joda</label>
-                      <input 
-                        type="text" 
-                        className="form-control"
-                        placeholder="Ej. ¡Llora la esférica!"
-                        value={setupPhrase}
-                        onChange={(e) => setSetupPhrase(e.target.value)}
-                        style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff' }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
-                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Color Raya 1</label>
-                        <input 
-                          type="color" 
-                          style={{ height: '38px', width: '100%', cursor: 'pointer', padding: 0, background: 'none', border: 'none' }}
-                          value={setupColor1}
-                          onChange={(e) => setSetupColor1(e.target.value)}
-                        />
-                      </div>
-                      <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
-                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Color Raya 2</label>
-                        <input 
-                          type="color" 
-                          style={{ height: '38px', width: '100%', cursor: 'pointer', padding: 0, background: 'none', border: 'none' }}
-                          value={setupColor2}
-                          onChange={(e) => setSetupColor2(e.target.value)}
-                        />
-                      </div>
-                      <div className="form-group" style={{ flex: '1 1 140px', margin: 0 }}>
-                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Patrón de Fondo</label>
-                        <select 
-                          className="form-control"
-                          value={setupPattern}
-                          onChange={(e) => setSetupPattern(e.target.value)}
-                          style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff', height: '38px' }}
-                        >
-                          <option value="diagonal">Líneas Diagonales</option>
-                          <option value="horizontal">Líneas Horizontales</option>
-                          <option value="vertical">Líneas Verticales</option>
-                          <option value="checkers">Tablero de Ajedrez</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      <button 
-                        type="button"
-                        className="btn-secondary"
-                        onClick={async () => {
-                          await handleSaveSetup();
-                          handleLocalPreviewBoludeo();
-                        }}
-                        disabled={boludeoCooldown > 0}
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderColor: '#ffb703', color: '#ffb703', cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer' }}
-                      >
-                        🔍 PROBAR SETUP
-                      </button>
-                      <button 
-                        type="button"
-                        className="btn-primary"
-                        onClick={async () => {
-                          await handleSaveSetup();
-                          setShowSetupBoludeo(false);
-                          alert('¡Configuración guardada! Listo para usar.');
-                        }}
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', width: 'auto', background: 'linear-gradient(135deg, #00ff87, #60efff)' }}
-                      >
-                        💾 GUARDAR SETUP
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {boludeoCooldown > 0 && (
-                <div style={{ width: '100%', background: 'rgba(255, 255, 255, 0.08)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${(boludeoCooldown / 30) * 100}%`,
-                    background: 'linear-gradient(90deg, #ff4d4d, #f1a80a)',
-                    height: '100%',
-                    transition: 'width 1s linear',
-                    borderRadius: '3px'
-                  }} />
-                </div>
-              )}
-            </div>
-
-            {/* Menu Tabs */}
-            <nav className="tabs-navigation">
-              <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => setActiveTab('predictions')}>
-                📝 Mis Predicciones
-              </button>
-              <button className={`tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>
-                📊 Tabla General
-              </button>
-              <button className={`tab-btn ${activeTab === 'friends' ? 'active' : ''}`} onClick={() => setActiveTab('friends')}>
-                👥 Ver Amigos
-              </button>
-              <button className={`tab-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
-                ⚙️ Resultados Reales
-              </button>
-            </nav>
-
             {/* PESTAÑA: Pronósticos Paginados de a 1 partido */}
             {activeTab === 'predictions' && (
               <div>
@@ -1904,6 +1729,181 @@ function App() {
                 </div>
               </div>
             )}
+
+            {/* Banner de Test Boludeo */}
+            <div className="glass-card mb-4" style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              background: 'linear-gradient(135deg, rgba(255, 77, 77, 0.08), rgba(241, 168, 10, 0.08))', 
+              border: '1px solid rgba(255, 77, 77, 0.3)',
+              padding: '1.25rem',
+              borderRadius: '12px',
+              gap: '1rem',
+              marginTop: '2rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ flex: '1 1 250px' }}>
+                  <h4 style={{ color: '#ffb703', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    🔥 Test Boludeo del #1
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    Personaliza tu joda presionando "⚙️ SETUP BOLUDEO" o castiga a todos tus amigos con "💥 ¡BOLUDEAR!".
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <button 
+                    className="btn-secondary" 
+                    onClick={() => setShowSetupBoludeo(!showSetupBoludeo)} 
+                    style={{ 
+                      width: 'auto',
+                      minWidth: '120px',
+                      borderColor: '#ffb703',
+                      color: '#ffb703',
+                      fontWeight: 'bold',
+                      fontSize: '0.95rem',
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    ⚙️ SETUP BOLUDEO
+                  </button>
+                  <button 
+                    className="btn-primary" 
+                    onClick={async () => {
+                      await handleSaveSetup();
+                      await handleTriggerBoludeo();
+                    }} 
+                    disabled={boludeoCooldown > 0}
+                    style={{ 
+                      width: 'auto', 
+                      minWidth: '130px',
+                      background: boludeoCooldown > 0 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ff4d4d, #f1a80a)', 
+                      border: 'none',
+                      boxShadow: boludeoCooldown > 0 ? 'none' : '0 4px 12px rgba(255, 77, 77, 0.4)',
+                      fontWeight: 'bold',
+                      fontSize: '0.95rem',
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      color: boludeoCooldown > 0 ? '#666' : '#fff',
+                      cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {boludeoCooldown > 0 ? `⏳ (${boludeoCooldown}s)` : '💥 ¡BOLUDEAR!'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Panel de Configuración Expandible */}
+              {showSetupBoludeo && (
+                <div className="glass-card animate-fade-in" style={{ padding: '1.25rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', marginTop: '0.5rem' }}>
+                  <h5 style={{ color: '#ffb703', fontSize: '0.95rem', marginBottom: '1rem', fontWeight: 'bold' }}>⚙️ Personalizar mi Boludeo</h5>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Frase Mística de la Joda</label>
+                      <input 
+                        type="text" 
+                        className="form-control"
+                        placeholder="Ej. ¡Llora la esférica!"
+                        value={setupPhrase}
+                        onChange={(e) => setSetupPhrase(e.target.value)}
+                        style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
+                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Color Raya 1</label>
+                        <input 
+                          type="color" 
+                          style={{ height: '38px', width: '100%', cursor: 'pointer', padding: 0, background: 'none', border: 'none' }}
+                          value={setupColor1}
+                          onChange={(e) => setSetupColor1(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: '1 1 100px', margin: 0 }}>
+                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Color Raya 2</label>
+                        <input 
+                          type="color" 
+                          style={{ height: '38px', width: '100%', cursor: 'pointer', padding: 0, background: 'none', border: 'none' }}
+                          value={setupColor2}
+                          onChange={(e) => setSetupColor2(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: '1 1 140px', margin: 0 }}>
+                        <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Patrón de Fondo</label>
+                        <select 
+                          className="form-control"
+                          value={setupPattern}
+                          onChange={(e) => setSetupPattern(e.target.value)}
+                          style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff', height: '38px' }}
+                        >
+                          <option value="diagonal">Líneas Diagonales</option>
+                          <option value="horizontal">Líneas Horizontales</option>
+                          <option value="vertical">Líneas Verticales</option>
+                          <option value="checkers">Tablero de Ajedrez</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <button 
+                        type="button"
+                        className="btn-secondary"
+                        onClick={async () => {
+                          await handleSaveSetup();
+                          handleLocalPreviewBoludeo();
+                        }}
+                        disabled={boludeoCooldown > 0}
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderColor: '#ffb703', color: '#ffb703', cursor: boludeoCooldown > 0 ? 'not-allowed' : 'pointer' }}
+                      >
+                        🔍 PROBAR SETUP
+                      </button>
+                      <button 
+                        type="button"
+                        className="btn-primary"
+                        onClick={async () => {
+                          await handleSaveSetup();
+                          setShowSetupBoludeo(false);
+                          alert('¡Configuración guardada! Listo para usar.');
+                        }}
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', width: 'auto', background: 'linear-gradient(135deg, #00ff87, #60efff)' }}
+                      >
+                        💾 GUARDAR SETUP
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {boludeoCooldown > 0 && (
+                <div style={{ width: '100%', background: 'rgba(255, 255, 255, 0.08)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${(boludeoCooldown / 30) * 100}%`,
+                    background: 'linear-gradient(90deg, #ff4d4d, #f1a80a)',
+                    height: '100%',
+                    transition: 'width 1s linear',
+                    borderRadius: '3px'
+                  }} />
+                </div>
+              )}
+            </div>
+
+            {/* Menu Tabs */}
+            <nav className="tabs-navigation" style={{ marginTop: '1rem' }}>
+              <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => setActiveTab('predictions')}>
+                📝 Mis Predicciones
+              </button>
+              <button className={`tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>
+                📊 Tabla General
+              </button>
+              <button className={`tab-btn ${activeTab === 'friends' ? 'active' : ''}`} onClick={() => setActiveTab('friends')}>
+                👥 Ver Amigos
+              </button>
+              <button className={`tab-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
+                ⚙️ Resultados Reales
+              </button>
+            </nav>
 
             {/* Cerrar Sesión y salir */}
             <div style={{ marginTop: '2rem', textAlign: 'center' }}>
