@@ -1333,7 +1333,7 @@ function App() {
             <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
               Te registraste en: {currentTenant?.name}
             </h4>
-            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.25rem', lineHeight: '1.6', fontWeight: 600, fontStyle: 'italic' }}>
+            <p style={{ color: 'var(--text-primary)', margin: '1.5rem 0', fontSize: '1.25rem', lineHeight: '1.6', fontWeight: 600, fontStyle: 'italic' }}>
               "{welcomePopupMessage}"
             </p>
             <button 
@@ -1363,7 +1363,7 @@ function App() {
           <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #ffb703', animation: 'float 0.5s ease-out' }}>
             <span style={{ fontSize: '3.5rem' }}>😜</span>
             <h2 style={{ marginTop: '1rem', color: '#ffb703' }}>¡ATENCIÓN PERDEDOR!</h2>
-            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.15rem', lineHeight: '1.6', fontWeight: 600, whiteSpace: 'pre-wrap' }}>
+            <p style={{ color: 'var(--text-primary)', margin: '1.5rem 0', fontSize: '1.15rem', lineHeight: '1.6', fontWeight: 600, whiteSpace: 'pre-wrap' }}>
               {banterMessage}
             </p>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Este mensaje se cerrará solo en segundos...</div>
@@ -1378,7 +1378,7 @@ function App() {
             <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', marginTop: '0.5rem' }}>
               De: {boludeoPopupTriggerer}
             </h4>
-            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.35rem', lineHeight: '1.6', fontWeight: 700, whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
+            <p style={{ color: 'var(--text-primary)', margin: '1.5rem 0', fontSize: '1.35rem', lineHeight: '1.6', fontWeight: 700, whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
               "{boludeoPopupMessage}"
             </p>
             <button 

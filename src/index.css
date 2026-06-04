@@ -95,7 +95,7 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
-  background: rgba(10, 15, 29, 0.6);
+  background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-border);
   position: sticky;
@@ -572,7 +572,7 @@ h1, h2, h3, h4, h5, h6 {
     top: 0;
     z-index: 999;
     padding: calc(0.5rem + env(safe-area-inset-top)) 0.75rem 0.5rem 0.75rem !important;
-    background: rgba(10, 15, 29, 0.95);
+    background: var(--glass-bg);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     display: flex;
