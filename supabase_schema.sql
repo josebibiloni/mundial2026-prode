@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS mini_duels (
   opponent_message TEXT,
   status TEXT DEFAULT 'pending', -- 'pending', 'completed'
   winner_username TEXT,
+  loser_response TEXT,           -- Descargo del perdedor
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

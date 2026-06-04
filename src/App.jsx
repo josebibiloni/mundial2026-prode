@@ -653,6 +653,56 @@ function App() {
     }
   };
 
+  const handleSendLoserResponse = async (e, duelId, responseText) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!responseText || !duelId) return;
+
+    let updatedRemote = false;
+    if (isSupabaseConnected && supabase && !duelId.toString().startsWith('local_')) {
+      try {
+        const { error } = await supabase
+          .from('mini_duels')
+          .update({ loser_response: responseText })
+          .eq('id', duelId);
+        
+        if (!error) {
+          updatedRemote = true;
+          alert('📝 Descargo enviado con éxito.');
+          setShowLoserResponseModal(false);
+          setLoserResponseText('');
+          setActiveLosingDuelId(null);
+          if (currentTenant) {
+            await loadDuelsForTenant(currentTenant.id);
+          }
+        } else {
+          console.error(error);
+          alert('Error al enviar descargo a Supabase.');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (!updatedRemote) {
+      if (currentTenant) {
+        const currentLocal = localStorage.getItem(`local_duels_${currentTenant.id}`);
+        if (currentLocal) {
+          const duelsList = JSON.parse(currentLocal);
+          const idx = duelsList.findIndex(d => d.id === duelId);
+          if (idx !== -1) {
+            duelsList[idx].loser_response = responseText;
+            localStorage.setItem(`local_duels_${currentTenant.id}`, JSON.stringify(duelsList));
+            setDuels(duelsList);
+          }
+        }
+        alert('📝 Descargo enviado con éxito (Local).');
+        setShowLoserResponseModal(false);
+        setLoserResponseText('');
+        setActiveLosingDuelId(null);
+      }
+    }
+  };
+
   // Reglas de puntuación
   const calculatePoints = (pred, actual) => {
     if (actual.status !== 'played' || actual.actualScoreA === null || actual.actualScoreB === null) {
