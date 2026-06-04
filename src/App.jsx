@@ -141,13 +141,10 @@ function App() {
               endedAt: Date.now() + 30000
             });
 
-            // Mostrar el popup por 7 segundos
+            // Mostrar el popup
             setBoludeoPopupMessage(latest.message);
             setBoludeoPopupTriggerer(latest.triggered_by_username);
             setShowBoludeoPopup(true);
-            setTimeout(() => {
-              setShowBoludeoPopup(false);
-            }, 7000);
 
             // El efecto de fondo y marca de agua ahora se quita automáticamente mediante useEffect
           }
@@ -256,10 +253,6 @@ function App() {
     
     // Iniciar cooldown de 30 segundos
     setBoludeoCooldown(30);
-
-    setTimeout(() => {
-      setShowBoludeoPopup(false);
-    }, 7000);
   };
 
   // Activar el boludeo del #1 para todos los demás
@@ -950,17 +943,30 @@ function App() {
         </div>
       )}      {/* MODAL BOLUDEO POPUP (Chicana de botón Test Boludeo) */}
       {showBoludeoPopup && (
-        <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #ff4d4d', animation: 'float 0.5s ease-out' }}>
+        <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #ff4d4d', animation: 'float 0.5s ease-out', maxWidth: '450px', width: '90%' }}>
             <span style={{ fontSize: '3.5rem' }}>🔥</span>
             <h2 style={{ marginTop: '1rem', color: '#ff4d4d' }}>🚨 ¡TE ESTÁN BOLUDEANDO! 🚨</h2>
             <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', marginTop: '0.5rem' }}>
               De: {boludeoPopupTriggerer}
             </h4>
-            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.25rem', lineHeight: '1.6', fontWeight: 700, whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
+            <p style={{ color: 'white', margin: '1.5rem 0', fontSize: '1.35rem', lineHeight: '1.6', fontWeight: 700, whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
               "{boludeoPopupMessage}"
             </p>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Esta chicana terminará en unos segundos...</div>
+            <button 
+              className="btn-primary" 
+              onClick={() => setShowBoludeoPopup(false)}
+              style={{ 
+                marginTop: '1.5rem', 
+                width: 'auto', 
+                padding: '0.75rem 2.5rem', 
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)'
+              }}
+            >
+              Entendido 😔
+            </button>
           </div>
         </div>
       )}
@@ -1348,14 +1354,91 @@ function App() {
                       </div>
                     </div>
 
-                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
+                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', width: '100%' }}>
                       {currentMatch.status === 'played' ? (
-                        <div style={{ textAlign: 'left' }}>
-                          <div>Resultado Oficial: <strong style={{ color: 'var(--accent-color)' }}>{currentMatch.actualScoreA} - {currentMatch.actualScoreB}</strong></div>
-                          <span className="points-pill">
-                            Puntos ganados: {calculatePoints(predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id], currentMatch)}
-                          </span>
-                        </div>
+                        (() => {
+                          const pts = calculatePoints(predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id], currentMatch);
+                          let badgeBg = 'rgba(255, 77, 77, 0.15)';
+                          let badgeColor = '#ff4d4d';
+                          let comment = '';
+                          
+                          if (pts === 0) {
+                            badgeBg = 'rgba(255, 77, 77, 0.2)';
+                            badgeColor = '#ff4d4d';
+                            const phrases = [
+                              "¡Horrible! No le pegaste ni al arco iris 🪵",
+                              "¡Un espanto! Dedicate a otra cosa... 🩴",
+                              "¿Pusiste el resultado con los ojos cerrados? 🙈",
+                              "¡Cero absoluto! Tus amigos se te están cagando de risa 🤡",
+                              "Ni queriendo le errás tan feo 📉"
+                            ];
+                            comment = phrases[currentMatch.id % phrases.length];
+                          } else if (pts >= 1 && pts <= 4) {
+                            badgeBg = 'rgba(241, 168, 10, 0.2)';
+                            badgeColor = '#f1a80a';
+                            const phrases = [
+                              "Zafaste raspando. Suma algo al menos... 🐢",
+                              "Casi casi... Estuvo cerca pero te faltó fútbol ⚽",
+                              "Algo es algo, peor es nada 🤷",
+                              "¡Buen intento! Seguí participando 📈",
+                              "Un puntito inteligente para la tabla 🧠"
+                            ];
+                            comment = phrases[currentMatch.id % phrases.length];
+                          } else {
+                            badgeBg = 'rgba(0, 255, 135, 0.2)';
+                            badgeColor = '#00ff87';
+                            const phrases = [
+                              "¡Qué bestia! ¡Sos el mismísimo DT del prode! 🧙‍♂️",
+                              "¡Puntaje perfecto! ¡La tenés toda clara! 🚀",
+                              "¡Descomunal! Viajás en primera clase al mundial ✈️",
+                              "¡Sos Gardel! Metiste magia pura ✨",
+                              "¡Increíble! Este pronóstico fue cine 🎬"
+                            ];
+                            comment = phrases[currentMatch.id % phrases.length];
+                          }
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                                <div style={{ textAlign: 'left' }}>
+                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resultado Oficial</span>
+                                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginTop: '0.2rem' }}>
+                                    {currentMatch.actualScoreA} - {currentMatch.actualScoreB}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tu Puntuación</span>
+                                  <div style={{ 
+                                    background: badgeBg, 
+                                    color: badgeColor, 
+                                    padding: '0.4rem 1rem', 
+                                    borderRadius: '8px', 
+                                    fontSize: '1.25rem', 
+                                    fontWeight: 'bold',
+                                    marginTop: '0.2rem',
+                                    border: `1px solid ${badgeColor}44`,
+                                    display: 'inline-block'
+                                  }}>
+                                    +{pts} {pts === 1 ? 'punto' : 'puntos'}
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ 
+                                background: 'rgba(255,255,255,0.03)', 
+                                padding: '0.75rem 1rem', 
+                                borderRadius: '8px', 
+                                borderLeft: `4px solid ${badgeColor}`,
+                                fontStyle: 'italic',
+                                fontSize: '0.95rem',
+                                color: '#fff',
+                                marginTop: '0.5rem',
+                                textAlign: 'left'
+                              }}>
+                                {comment}
+                              </div>
+                            </div>
+                          );
+                        })()
                       ) : (
                         <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Por Jugar - Ingresa tus predicciones arriba</span>
                       )}
