@@ -2760,8 +2760,8 @@ function App() {
             <div className="glass-card mb-4" style={{ 
               display: 'flex', 
               flexDirection: 'column',
-              background: 'linear-gradient(135deg, rgba(255, 77, 77, 0.08), rgba(241, 168, 10, 0.08))', 
-              border: '1px solid rgba(255, 77, 77, 0.3)',
+              background: 'linear-gradient(135deg, #1e5c3f, #113824)', 
+              border: '1px solid rgba(0, 255, 135, 0.25)',
               padding: '1.25rem',
               borderRadius: '12px',
               gap: '1rem',
@@ -2769,10 +2769,10 @@ function App() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ flex: '1 1 250px' }}>
-                  <h4 style={{ color: '#ffb703', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <h4 style={{ color: '#ffd700', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}>
                     🔥 Test Boludeo del #1
                   </h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#ffffff', marginTop: '0.2rem', opacity: 0.95 }}>
                     Personaliza tu joda presionando "⚙️ SETUP BOLUDEO" o castiga a todos tus amigos con "💥 ¡BOLUDEAR!".
                   </p>
                 </div>
@@ -2783,12 +2783,13 @@ function App() {
                     style={{ 
                       width: 'auto',
                       minWidth: '120px',
-                      borderColor: '#ffb703',
-                      color: '#ffb703',
+                      borderColor: '#ffd700',
+                      color: '#ffd700',
                       fontWeight: 'bold',
                       fontSize: '0.95rem',
                       padding: '0.6rem 1.2rem',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
+                      background: 'transparent'
                     }}
                   >
                     ⚙️ SETUP BOLUDEO
