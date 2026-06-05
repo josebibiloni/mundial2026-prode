@@ -1294,6 +1294,154 @@ function App() {
     }
   };
 
+  // Exportar backup de pronósticos de usuario individual (JSON)
+  const handleExportUserBackup = () => {
+    if (!currentUser || !currentTenant) return;
+    const userKeyId = `${currentTenant.id}_${currentUser.id}`;
+    const userKeyUsername = `${currentTenant.id}_${(currentUser.username || '').trim()}`;
+    const userPreds = predictions[userKeyId] || predictions[userKeyUsername] || {};
+
+    const backupData = {
+      backup_type: 'single_user',
+      tenant_id: currentTenant.id,
+      username: currentUser.username,
+      whatsapp: currentUser.whatsapp,
+      predictions: userPreds,
+      exported_at: new Date().toISOString()
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `prode_backup_${currentUser.username}_${currentTenant.id}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Importar backup de pronósticos de usuario individual (JSON)
+  const handleImportUserBackup = (e) => {
+    if (!currentUser || !currentTenant) return;
+    
+    const fileReader = new FileReader();
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    fileReader.onload = async (event) => {
+      try {
+        const parsedData = JSON.parse(event.target.result);
+        
+        if (!parsedData.predictions || (parsedData.backup_type !== 'single_user' && parsedData.backup_type !== 'group_all')) {
+          alert('Archivo de copia de seguridad no válido.');
+          return;
+        }
+
+        if (parsedData.backup_type === 'single_user' && parsedData.username !== currentUser.username) {
+          if (!window.confirm(`Este backup pertenece al usuario "${parsedData.username}". ¿Estás seguro de que quieres importarlo para tu usuario "${currentUser.username}"?`)) {
+            return;
+          }
+        }
+
+        const predsToImport = parsedData.predictions;
+        const matchIds = Object.keys(predsToImport);
+        
+        if (matchIds.length === 0) {
+          alert('El archivo no contiene pronósticos.');
+          return;
+        }
+
+        let successCount = 0;
+        
+        if (isSupabaseConnected && supabase) {
+          for (const matchId of matchIds) {
+            const pred = predsToImport[matchId];
+            if (pred && (pred.scoreA !== '' || pred.scoreB !== '')) {
+              try {
+                const predictionRow = {
+                  tenant_id: currentTenant.id,
+                  match_id: parseInt(matchId),
+                  score_a: pred.scoreA === '' ? 0 : parseInt(pred.scoreA),
+                  score_b: pred.scoreB === '' ? 0 : parseInt(pred.scoreB),
+                };
+                
+                let { error } = await supabase.from('predictions').upsert({
+                  ...predictionRow,
+                  participant_id: currentUser.id
+                });
+                
+                if (error && (error.code === '42703' || error.message?.includes('participant_id'))) {
+                  await supabase.from('predictions').upsert({
+                    ...predictionRow,
+                    participant_username: currentUser.username
+                  });
+                }
+                successCount++;
+              } catch (upsertErr) {
+                console.error(`Error al importar partido #${matchId}:`, upsertErr);
+              }
+            }
+          }
+        }
+        
+        // Actualizar el estado local
+        const keyId = `${currentTenant.id}_${currentUser.id}`;
+        const keyUsername = `${currentTenant.id}_${currentUser.username}`;
+        
+        setPredictions(prev => ({
+          ...prev,
+          [keyId]: {
+            ...prev[keyId],
+            ...predsToImport
+          },
+          [keyUsername]: {
+            ...prev[keyUsername],
+            ...predsToImport
+          }
+        }));
+
+        alert(`¡Importación completada! Se procesaron ${successCount} pronósticos en la base de datos.`);
+        fetchInitialData();
+      } catch (err) {
+        alert('Error al leer el archivo de copia de seguridad: ' + err.message);
+      }
+    };
+    fileReader.readAsText(file, "UTF-8");
+  };
+
+  // Exportar backup global de todas las predicciones del grupo (JSON)
+  const handleExportGroupBackup = () => {
+    if (!currentUser?.isAdmin || !currentTenant) return;
+    
+    // Obtener predicciones asociadas al tenant actual
+    const tenantPredictions = {};
+    Object.keys(predictions).forEach(key => {
+      if (key.startsWith(`${currentTenant.id}_`)) {
+        tenantPredictions[key] = predictions[key];
+      }
+    });
+
+    const backupData = {
+      backup_type: 'group_all',
+      tenant_id: currentTenant.id,
+      predictions: tenantPredictions,
+      participants: participants.map(p => ({
+        username: p.username,
+        full_name: p.full_name,
+        whatsapp: p.whatsapp,
+        mystic_phrase: p.mystic_phrase
+      })),
+      exported_at: new Date().toISOString()
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `prode_RESPALDO_TOTAL_${currentTenant.id}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   // Guardar puntuación de partido de forma manual por el Admin
   const handleSaveMatchScoreManual = async (matchId, scoreA, scoreB, status) => {
     if (!currentUser?.isAdmin) {
@@ -2198,6 +2346,37 @@ function App() {
                       </button>
                     </div>
 
+                    {/* Copias de seguridad de pronósticos */}
+                    <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', textAlign: 'left' }}>
+                      <h4 style={{ fontSize: '1rem', color: 'var(--accent-color)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        💾 Copia de Seguridad de Pronósticos
+                      </h4>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                        Guarda tus pronósticos en tu dispositivo en un archivo JSON o restáuralos desde una copia previa si ocurre algún error.
+                      </p>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        <button 
+                          className="btn-secondary" 
+                          onClick={handleExportUserBackup} 
+                          style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.8rem', flex: '1 1 auto', justifyContent: 'center' }}
+                        >
+                          📥 Exportar mi Backup (.JSON)
+                        </button>
+                        <label 
+                          className="btn-secondary" 
+                          style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.8rem', flex: '1 1 auto', textAlign: 'center', cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          📤 Importar desde Backup
+                          <input 
+                            type="file" 
+                            accept=".json" 
+                            onChange={handleImportUserBackup} 
+                            style={{ display: 'none' }} 
+                          />
+                        </label>
+                      </div>
+                    </div>
+
                   </div>
                 ) : (
                   <p className="text-center" style={{ color: 'var(--text-secondary)' }}>No hay partidos para el grupo seleccionado.</p>
@@ -2735,6 +2914,23 @@ function App() {
                           ))
                         )}
                       </div>
+                    </div>
+
+                    {/* Copia de Seguridad Global para el Admin */}
+                    <div style={{ marginTop: '3rem', borderTop: '2px solid var(--glass-border)', paddingTop: '2rem' }}>
+                      <h3 style={{ fontSize: '1.3rem', color: '#00ff87', marginBottom: '1.5rem', fontWeight: 'bold' }}>
+                        📦 Copia de Seguridad Global del Grupo
+                      </h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                        Descarga un respaldo en un único archivo JSON con todas las predicciones registradas por todos los integrantes de este grupo. Úsalo como salvaguarda en caso de desastre.
+                      </p>
+                      <button 
+                        className="btn-primary" 
+                        onClick={handleExportGroupBackup}
+                        style={{ width: 'auto', background: 'linear-gradient(135deg, #00ff87, #60efff)', color: '#000', fontWeight: 'bold' }}
+                      >
+                        📦 Descargar Respaldo Total del Grupo (.JSON)
+                      </button>
                     </div>
 
                   </div>
