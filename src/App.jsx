@@ -1166,7 +1166,8 @@ function App() {
       "Me parece que alguien necesita lentes... 👓",
       "Metiste mal los garfios ⌨️",
       "Esa combinación no existe acá, patadura. 🩴",
-      "¡Alerta de impostor! Le erraste al WhatsApp o al PIN. 🚨"
+      "¡Alerta de impostor! Le erraste al WhatsApp o al PIN. 🚨",
+      "Me parece que vos debes ser de Macachin, sali de aca, loser!"
     ];
 
     const found = participants.find(p => p.whatsapp === cleanWhatsapp && p.pin === cleanPin);
