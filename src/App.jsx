@@ -1164,19 +1164,22 @@ function App() {
       return;
     }
 
-    const BANTER_LOGIN_ERRORS = [
-      "¿Y vos quién sos? ¿Quién te conoce? 🧐",
-      "Me parece que alguien necesita lentes... 👓",
-      "Metiste mal los garfios ⌨️",
-      "Esa combinación no existe acá, patadura. 🩴",
-      "¡Alerta de impostor! Le erraste al WhatsApp o al PIN. 🚨",
-      "Me parece que vos debes ser de Macachin, sali de aca, loser!"
-    ];
-
     const found = participants.find(p => p.whatsapp === cleanWhatsapp && p.pin === cleanPin);
     if (!found) {
-      const idx = Math.floor(Math.random() * BANTER_LOGIN_ERRORS.length);
-      alert(BANTER_LOGIN_ERRORS[idx]);
+      // 40% de probabilidad de mostrar la frase de Macachin/La Rioja
+      if (Math.random() < 0.40) {
+        alert("Me parece que vos debes ser de Macachin, o de La Rioja... Vola de aca, pajarito!");
+      } else {
+        const standardBanter = [
+          "¿Y vos quién sos? ¿Quién te conoce? 🧐",
+          "Me parece que alguien necesita lentes... 👓",
+          "Metiste mal los garfios ⌨️",
+          "Esa combinación no existe acá, patadura. 🩴",
+          "¡Alerta de impostor! Le erraste al WhatsApp o al PIN. 🚨"
+        ];
+        const idx = Math.floor(Math.random() * standardBanter.length);
+        alert(standardBanter[idx]);
+      }
       return;
     }
 
