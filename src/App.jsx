@@ -373,32 +373,33 @@ function App() {
         // Cargar Partidos
         let { data: dbMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
         if (dbMatches && dbMatches.length > 0) {
-          // Si el total en la DB es menor que el fixture configurado (ej. tiene 10 y ahora son 72),
-          // autocompletamos con los partidos faltantes para sanar la base de datos automáticamente.
-          if (dbMatches.length < initialMatches.length) {
-            const existingIds = new Set(dbMatches.map(m => m.id));
-            const missingMatches = initialMatches.filter(m => !existingIds.has(m.id));
-            if (missingMatches.length > 0) {
-              const dbSeed = missingMatches.map(m => ({
-                id: m.id,
-                team_a: m.teamA,
-                flag_a: m.flagA,
-                team_b: m.teamB,
-                flag_b: m.flagB,
-                group_name: m.group,
-                match_date: m.date,
-                stadium: m.stadium,
-                actual_score_a: m.actualScoreA,
-                actual_score_b: m.actualScoreB,
-                status: m.status
-              }));
-              await supabase.from('matches').insert(dbSeed);
-              
-              // Volver a cargar para tener todos los partidos sincronizados
-              let { data: reloadedMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
-              if (reloadedMatches && reloadedMatches.length > 0) {
-                dbMatches = reloadedMatches;
-              }
+          // Si el total en la DB es menor que el fixture configurado, o si los equipos de algún partido
+          // no coinciden (por ejemplo, por cambios en el sorteo oficial), actualizamos/upserteamos el fixture.
+          const needsUpdate = dbMatches.length < initialMatches.length || dbMatches.some(dbM => {
+            const initM = initialMatches.find(im => im.id === dbM.id);
+            return initM && (initM.teamA !== dbM.team_a || initM.teamB !== dbM.team_b);
+          });
+
+          if (needsUpdate) {
+            const dbSeed = initialMatches.map(m => ({
+              id: m.id,
+              team_a: m.teamA,
+              flag_a: m.flagA,
+              team_b: m.teamB,
+              flag_b: m.flagB,
+              group_name: m.group,
+              match_date: m.date,
+              stadium: m.stadium,
+              actual_score_a: m.actualScoreA,
+              actual_score_b: m.actualScoreB,
+              status: m.status
+            }));
+            await supabase.from('matches').upsert(dbSeed);
+            
+            // Volver a cargar para tener todos los partidos sincronizados
+            let { data: reloadedMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
+            if (reloadedMatches && reloadedMatches.length > 0) {
+              dbMatches = reloadedMatches;
             }
           }
 
