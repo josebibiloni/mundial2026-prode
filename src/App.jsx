@@ -1010,28 +1010,7 @@ function App() {
   // Crear nuevo grupo
   const handleCreateTenant = async (e) => {
     e.preventDefault();
-    if (!newTenantName.trim()) return;
-
-    const id = newTenantName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    if (tenants.some(t => t.id === id)) {
-      alert('Ya existe un grupo similar.');
-      return;
-    }
-
-    const newTenant = { id, name: newTenantName };
-
-    if (isSupabaseConnected && supabase) {
-      try {
-        await supabase.from('tenants').insert(newTenant);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    const updatedTenants = [...tenants, newTenant];
-    setTenants(updatedTenants);
-    setNewTenantName('');
-    setCurrentTenant(newTenant);
+    alert('Comunicate con el Negro antes de hacer macanas');
   };
 
   // Registrar nuevo participante
@@ -2319,18 +2298,35 @@ function App() {
               <h2 className="onboarding-title">El Prode de los Amigos</h2>
               <p className="onboarding-subtitle">Selecciona tu grupo o crea uno nuevo para empezar.</p>
 
-              <div className="form-group">
-                <label>Grupos Activos</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
+              <div className="form-group" style={{ marginBottom: '2rem' }}>
+                <label style={{ fontSize: '1.25rem', color: 'var(--accent-color)', fontWeight: 'bold', display: 'block', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05rem', textAlign: 'center' }}>
+                  🔥 Grupos Activos 🔥
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto', padding: '0.25rem' }}>
                   {tenants.map(t => (
                     <button
                       key={t.id}
-                      className="btn-secondary"
-                      style={{ textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                      className="btn-primary"
+                      style={{ 
+                        textAlign: 'left', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '1.1rem 1.4rem', 
+                        background: 'linear-gradient(135deg, var(--accent-color), #00ff87)', 
+                        color: '#000', 
+                        fontWeight: 'bold', 
+                        fontSize: '1.1rem',
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 15px rgba(0, 255, 135, 0.2)',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        cursor: 'pointer'
+                      }}
                       onClick={() => setCurrentTenant(t)}
                     >
                       <span>🏆 {t.name}</span>
-                      <span>Entrar &rarr;</span>
+                      <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Entrar al Prode &rarr;</span>
                     </button>
                   ))}
                 </div>
@@ -2338,9 +2334,11 @@ function App() {
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '1.5rem 0' }} />
 
-              <form onSubmit={handleCreateTenant}>
-                <div className="form-group">
-                  <label htmlFor="tenantName">Crear un Nuevo Grupo</label>
+              <form onSubmit={handleCreateTenant} style={{ opacity: 0.85 }}>
+                <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                  <label htmlFor="tenantName" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05rem', textAlign: 'center', display: 'block' }}>
+                    Crear un Nuevo Grupo
+                  </label>
                   <input
                     type="text"
                     id="tenantName"
@@ -2348,10 +2346,13 @@ function App() {
                     placeholder="Ej. Compañeros de Fútbol"
                     value={newTenantName}
                     onChange={(e) => setNewTenantName(e.target.value)}
+                    style={{ height: '36px', fontSize: '0.85rem', maxWidth: '300px', margin: '0 auto' }}
                     required
                   />
                 </div>
-                <button type="submit" className="btn-primary">Crear Grupo</button>
+                <button type="submit" className="btn-secondary" style={{ width: 'auto', padding: '0.35rem 1rem', fontSize: '0.8rem', margin: '0 auto', display: 'block' }}>
+                  Crear Grupo
+                </button>
               </form>
             </div>
           </div>
