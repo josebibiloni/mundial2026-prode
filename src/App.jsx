@@ -38,6 +38,7 @@ function App() {
   const [currentTenant, setCurrentTenant] = useState(null); // { id, name }
   const [currentUser, setCurrentUser] = useState(null); // { id, username, fullName, mysticPhrase, whatsapp, isAdmin, stripeColor1, stripeColor2 }
   const [activeTab, setActiveTab] = useState('predictions'); // 'predictions' | 'leaderboard' | 'friends' | 'admin'
+  const [hasRedirected, setHasRedirected] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState(''); // ID del amigo a consultar
   const [comparisonUserId, setComparisonUserId] = useState(''); // ID para comparar resultados reales
   const [selectedDetailedMatchId, setSelectedDetailedMatchId] = useState(''); // ID del partido a detallar en tabla general
@@ -102,6 +103,26 @@ function App() {
       }
     }
   }, []);
+
+  // Redirección inteligente al ingresar (Tabla Principal o primer partido incompleto)
+  useEffect(() => {
+    if (currentUser && currentTenant && matches.length > 0 && !hasRedirected) {
+      const userPreds = predictions[`${currentTenant.id}_${currentUser.id}`] || predictions[`${currentTenant.id}_${(currentUser.username || '').trim()}`] || {};
+      const firstUnpredictedIdx = matches.findIndex(m => {
+        const pred = userPreds[m.id];
+        return !pred || pred.scoreA === '' || pred.scoreA === null || pred.scoreB === '' || pred.scoreB === null;
+      });
+
+      if (firstUnpredictedIdx !== -1) {
+        setActiveTab('predictions');
+        setCurrentMatchIndex(firstUnpredictedIdx);
+      } else {
+        setActiveTab('leaderboard');
+        setCurrentMatchIndex(0);
+      }
+      setHasRedirected(true);
+    }
+  }, [currentUser, currentTenant, matches, predictions, hasRedirected]);
 
   // Configuración de Boludeo Personalizado
   const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
@@ -2480,10 +2501,15 @@ function App() {
                       </span>
                       <button
                         className="btn-secondary"
-                        onClick={handleNextMatch}
-                        disabled={currentMatchIndex === filteredMatches.length - 1}
+                        onClick={() => {
+                          if (currentMatchIndex === filteredMatches.length - 1) {
+                            setCurrentMatchIndex(0);
+                          } else {
+                            handleNextMatch();
+                          }
+                        }}
                       >
-                        Siguiente &rarr;
+                        {currentMatchIndex === filteredMatches.length - 1 ? 'Finalizar ✓' : 'Siguiente \u2192'}
                       </button>
                     </div>
 
@@ -2497,54 +2523,15 @@ function App() {
             {/* PESTAÑA: Tabla de Posiciones */}
             {activeTab === 'leaderboard' && (
               <div className="glass-card">
-                {/* TABLA DE FASE 2 */}
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  🏆 Tabla Fase Final (Fase 2)
-                  <span style={{ fontSize: '0.8rem', background: 'gold', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 2</span>
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                  Standings para la Fase de Eliminación directa (Octavos de Final, Cuartos, Semifinal y Final). Comienza en 0 pts.
-                </p>
-                <div style={{ overflowX: 'auto', marginBottom: '3rem' }}>
-                  <table className="leaderboard-table">
-                    <thead>
-                      <tr>
-                        <th>Pos</th>
-                        <th>Apodo (Nickname)</th>
-                        <th style={{ textAlign: 'center' }}>Marcadores Exactos</th>
-                        <th style={{ textAlign: 'right' }}>Puntos Totales</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaderboardPhase2.map((row, idx) => (
-                        <tr key={row.id} className="leaderboard-row">
-                          <td className="rank-cell">{idx + 1}º</td>
-                          <td>
-                            <span
-                              style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
-                              title="Haz clic para ver el perfil"
-                              onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
-                            >
-                              {row.username}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>{row.exactScores} ⭐</td>
-                          <td className="points-cell" style={{ color: 'gold', fontWeight: 'bold' }}>{row.points} pts</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
                 {/* TABLA DE FASE 1 */}
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
-                  🏆 Tabla Fase de Grupos (Fase 1)
-                  <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 1</span>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  🏆 Tabla Fase de Grupos
+                  <span style={{ fontSize: '0.8rem', background: '#00ff87', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 1</span>
                 </h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                   Standings finales e inalterables de la Fase de Grupos.
                 </p>
-                <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+                <div style={{ overflowX: 'auto', marginBottom: '3rem' }}>
                   <table className="leaderboard-table">
                     <thead>
                       <tr>
@@ -2569,6 +2556,45 @@ function App() {
                           </td>
                           <td style={{ textAlign: 'center' }}>{row.exactScores} ⭐</td>
                           <td className="points-cell">{row.points} pts</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* TABLA DE FASE 2 */}
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
+                  🏆 Tabla Fase Final
+                  <span style={{ fontSize: '0.8rem', background: 'gold', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 2</span>
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                  Standings para la Fase de Eliminación directa (Octavos de Final, Cuartos, Semifinal y Final). Comienza en 0 pts.
+                </p>
+                <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+                  <table className="leaderboard-table">
+                    <thead>
+                      <tr>
+                        <th>Pos</th>
+                        <th>Apodo (Nickname)</th>
+                        <th style={{ textAlign: 'center' }}>Marcadores Exactos</th>
+                        <th style={{ textAlign: 'right' }}>Puntos Totales</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaderboardPhase2.map((row, idx) => (
+                        <tr key={row.id} className="leaderboard-row">
+                          <td className="rank-cell">{idx + 1}º</td>
+                          <td>
+                            <span
+                              style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
+                              title="Haz clic para ver el perfil"
+                              onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
+                            >
+                              {row.username}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>{row.exactScores} ⭐</td>
+                          <td className="points-cell" style={{ color: 'gold', fontWeight: 'bold' }}>{row.points} pts</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3676,11 +3702,21 @@ function App() {
 
             {/* Menu Tabs */}
             <nav className="tabs-navigation" style={{ marginTop: '1rem' }}>
-              <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => setActiveTab('predictions')}>
-                📝 Mis Predicciones
-              </button>
               <button className={`tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>
-                📊 Tabla General
+                📊 Tabla Principal
+              </button>
+              <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => {
+                setActiveTab('predictions');
+                const userPreds = predictions[`${currentTenant.id}_${currentUser.id}`] || predictions[`${currentTenant.id}_${(currentUser.username || '').trim()}`] || {};
+                const firstUnpredictedIdx = matches.findIndex(m => {
+                  const pred = userPreds[m.id];
+                  return !pred || pred.scoreA === '' || pred.scoreA === null || pred.scoreB === '' || pred.scoreB === null;
+                });
+                if (firstUnpredictedIdx !== -1) {
+                  setCurrentMatchIndex(firstUnpredictedIdx);
+                }
+              }}>
+                📝 Mis Predicciones
               </button>
               <button className={`tab-btn ${activeTab === 'friends' ? 'active' : ''}`} onClick={() => setActiveTab('friends')}>
                 👥 Ver Amigos
@@ -3721,6 +3757,7 @@ function App() {
                 onClick={() => {
                   setCurrentUser(null);
                   setCurrentTenant(null);
+                  setHasRedirected(false);
                   localStorage.removeItem('caseros_prode_user');
                   localStorage.removeItem('caseros_prode_tenant');
                   setShowLogoutConfirm(false);
