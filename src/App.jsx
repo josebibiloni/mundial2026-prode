@@ -1043,11 +1043,11 @@ function App() {
     const cleanPin = newUserPin.replace(/\D/g, '').slice(-4);
 
     if (cleanWhatsapp.length !== 8) {
-      alert('El número de Whatsapp debe tener al menos 8 dígitos numéricos (se guardarán los últimos 8).');
+      alert('Metiste mal los garfios. El número de WhatsApp debe tener al menos 8 dígitos.');
       return;
     }
     if (cleanPin.length !== 4) {
-      alert('El PIN debe tener exactamente 4 dígitos numéricos.');
+      alert('Me parece que alguien necesita lentes... El PIN debe tener exactamente 4 dígitos.');
       return;
     }
 
@@ -1152,9 +1152,27 @@ function App() {
     const cleanWhatsapp = loginWhatsapp.replace(/\D/g, '').slice(-8);
     const cleanPin = loginPin.replace(/\D/g, '').slice(-4);
 
+    if (cleanWhatsapp.length !== 8) {
+      alert('Metiste mal los garfios. El número de WhatsApp debe tener al menos 8 dígitos.');
+      return;
+    }
+    if (cleanPin.length !== 4) {
+      alert('Me parece que alguien necesita lentes... El PIN debe tener exactamente 4 dígitos.');
+      return;
+    }
+
+    const BANTER_LOGIN_ERRORS = [
+      "¿Y vos quién sos? ¿Quién te conoce? 🧐",
+      "Me parece que alguien necesita lentes... 👓",
+      "Metiste mal los garfios ⌨️",
+      "Esa combinación no existe acá, patadura. 🩴",
+      "¡Alerta de impostor! Le erraste al WhatsApp o al PIN. 🚨"
+    ];
+
     const found = participants.find(p => p.whatsapp === cleanWhatsapp && p.pin === cleanPin);
     if (!found) {
-      alert('Credenciales incorrectas para este grupo.');
+      const idx = Math.floor(Math.random() * BANTER_LOGIN_ERRORS.length);
+      alert(BANTER_LOGIN_ERRORS[idx]);
       return;
     }
 
