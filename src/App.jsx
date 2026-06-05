@@ -1814,7 +1814,7 @@ function App() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Nene, ¿vo' queré' morir en este instante?"
+                    placeholder="Ej. Nene, ¿vo' queré' morir en este instante?"
                     value={newUserMystic}
                     onChange={(e) => setNewUserMystic(e.target.value)}
                   />
