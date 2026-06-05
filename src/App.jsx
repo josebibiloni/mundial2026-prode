@@ -166,6 +166,7 @@ function App() {
   const [loginPin, setLoginPin] = useState(''); // PIN (4 digitos)
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [loginBtnText, setLoginBtnText] = useState('Iniciar Sesión');
+  const [selectedTenantId, setSelectedTenantId] = useState('caseros2026');
 
   const BANTER_LOGIN_PHRASES = [
     "Entra, Gil ⚽",
@@ -2327,36 +2328,62 @@ function App() {
 
               <div className="form-group" style={{ marginBottom: '2rem' }}>
                 <label style={{ fontSize: '1.25rem', color: 'var(--accent-color)', fontWeight: 'bold', display: 'block', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05rem', textAlign: 'center' }}>
-                  🔥 Grupos Activos 🔥
+                  🔥 Selecciona tu Grupo 🔥
                 </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto', padding: '0.25rem' }}>
+                <select
+                  className="form-control"
+                  value={selectedTenantId}
+                  onChange={(e) => setSelectedTenantId(e.target.value)}
+                  style={{ 
+                    fontSize: '1.1rem', 
+                    padding: '0.75rem', 
+                    background: 'var(--form-bg)', 
+                    color: 'var(--input-color)', 
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    width: '100%',
+                    cursor: 'pointer'
+                  }}
+                >
                   {tenants.map(t => (
-                    <button
-                      key={t.id}
-                      className="btn-primary"
-                      style={{ 
-                        textAlign: 'left', 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '1.1rem 1.4rem', 
-                        background: 'linear-gradient(135deg, var(--accent-color), #00ff87)', 
-                        color: '#000', 
-                        fontWeight: 'bold', 
-                        fontSize: '1.1rem',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 15px rgba(0, 255, 135, 0.2)',
-                        transition: 'transform 0.2s, box-shadow 0.2s',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => setCurrentTenant(t)}
-                    >
-                      <span>🏆 {t.name}</span>
-                      <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Entrar al Prode &rarr;</span>
-                    </button>
+                    <option key={t.id} value={t.id}>
+                      🏆 {t.name}
+                    </option>
                   ))}
-                </div>
+                </select>
+
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ 
+                    marginTop: '1.25rem',
+                    padding: '1.1rem 1.4rem', 
+                    background: 'linear-gradient(135deg, var(--accent-color), #00ff87)', 
+                    color: '#000', 
+                    fontWeight: 'bold', 
+                    fontSize: '1.1rem',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 15px rgba(0, 255, 135, 0.2)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                  onClick={() => {
+                    const found = tenants.find(t => t.id === selectedTenantId);
+                    if (found) {
+                      setCurrentTenant(found);
+                    } else if (tenants.length > 0) {
+                      // fallback al primero si por alguna razon caseros2026 no existe todavia
+                      const caserosOpt = tenants.find(t => t.id === 'caseros2026');
+                      setCurrentTenant(caserosOpt || tenants[0]);
+                    }
+                  }}
+                >
+                  Entrar al Prode &rarr;
+                </button>
               </div>
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '1.5rem 0' }} />
