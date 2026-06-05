@@ -25,6 +25,15 @@ function App() {
   const isSupabaseConnected = true;
   const isPredictionsClosed = new Date() >= new Date('2026-06-10T23:59:00');
 
+  const isMatchPredictionsClosed = (match) => {
+    if (!match) return true;
+    const matchStage = match.stage || (match.id >= 73 ? 2 : 1);
+    if (matchStage === 2) {
+      return new Date() >= new Date('2026-06-28T00:00:00');
+    }
+    return new Date() >= new Date('2026-06-10T23:59:00');
+  };
+
   // Sesión y Navegación
   const [currentTenant, setCurrentTenant] = useState(null); // { id, name }
   const [currentUser, setCurrentUser] = useState(null); // { id, username, fullName, mysticPhrase, whatsapp, isAdmin, stripeColor1, stripeColor2 }
@@ -374,6 +383,8 @@ function App() {
         // Cargar Partidos
         let { data: dbMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
         if (dbMatches && dbMatches.length > 0) {
+          const hasStageColumn = dbMatches.length > 0 && ('stage' in dbMatches[0]);
+
           // Si el total en la DB es menor que el fixture configurado, o si los equipos de algún partido
           // no coinciden (por ejemplo, por cambios en el sorteo oficial), actualizamos/upserteamos el fixture.
           const needsUpdate = dbMatches.length < initialMatches.length || dbMatches.some(dbM => {
@@ -382,19 +393,25 @@ function App() {
           });
 
           if (needsUpdate) {
-            const dbSeed = initialMatches.map(m => ({
-              id: m.id,
-              team_a: m.teamA,
-              flag_a: m.flagA,
-              team_b: m.teamB,
-              flag_b: m.flagB,
-              group_name: m.group,
-              match_date: m.date,
-              stadium: m.stadium,
-              actual_score_a: m.actualScoreA,
-              actual_score_b: m.actualScoreB,
-              status: m.status
-            }));
+            const dbSeed = initialMatches.map(m => {
+              const row = {
+                id: m.id,
+                team_a: m.teamA,
+                flag_a: m.flagA,
+                team_b: m.teamB,
+                flag_b: m.flagB,
+                group_name: m.group,
+                match_date: m.date,
+                stadium: m.stadium,
+                actual_score_a: m.actualScoreA,
+                actual_score_b: m.actualScoreB,
+                status: m.status
+              };
+              if (hasStageColumn) {
+                row.stage = m.stage;
+              }
+              return row;
+            });
             await supabase.from('matches').upsert(dbSeed);
             
             // Volver a cargar para tener todos los partidos sincronizados
@@ -415,7 +432,8 @@ function App() {
             stadium: m.stadium,
             actualScoreA: m.actual_score_a,
             actualScoreB: m.actual_score_b,
-            status: m.status
+            status: m.status,
+            stage: m.stage !== undefined ? m.stage : (m.id >= 73 ? 2 : 1)
           }));
           setMatches(mappedMatches);
         } else {
@@ -430,9 +448,15 @@ function App() {
             stadium: m.stadium,
             actual_score_a: m.actualScoreA,
             actual_score_b: m.actualScoreB,
-            status: m.status
+            status: m.status,
+            stage: m.stage
           }));
-          await supabase.from('matches').insert(dbSeed);
+          const { error } = await supabase.from('matches').insert(dbSeed);
+          if (error) {
+            // Reintentar sin la columna stage por si el usuario no ha corrido la migración SQL todavía
+            const fallbackSeed = dbSeed.map(({ stage, ...rest }) => rest);
+            await supabase.from('matches').insert(fallbackSeed);
+          }
           setMatches(initialMatches);
         }
 
@@ -797,8 +821,8 @@ function App() {
     return points;
   };
 
-  // Calcular tabla de posiciones
-  const getLeaderboard = () => {
+  // Calcular tabla de posiciones por fase
+  const getLeaderboardByStage = (stageNum) => {
     if (!currentTenant) return [];
     const list = participants;
     const ranked = list.map(user => {
@@ -809,7 +833,8 @@ function App() {
       const userPreds = predictions[`${currentTenant.id}_${user.id}`] || predictions[`${currentTenant.id}_${(user.username || '').trim()}`] || {};
 
       matches.forEach(match => {
-        if (match.status === 'played') {
+        const matchStage = match.stage || (match.id >= 73 ? 2 : 1);
+        if (matchStage === stageNum && match.status === 'played') {
           const pred = userPreds[match.id];
           const pts = calculatePoints(pred, match);
           totalPoints += pts;
@@ -822,10 +847,6 @@ function App() {
           }
         }
       });
-
-      // Sumar +2 puntos de bonificación en la general por cada duelo ganado
-      const userDuelsWon = duels.filter(d => d.winner_username === user.username && d.status === 'completed').length;
-      totalPoints += (userDuelsWon * 2);
 
       return {
         id: user.id,
@@ -849,7 +870,42 @@ function App() {
     });
   };
 
-  const leaderboard = getLeaderboard();
+  const getLeaderboardDuels = () => {
+    if (!currentTenant) return [];
+    const list = participants;
+    const ranked = list.map(user => {
+      const duelsWon = duels.filter(d => d.winner_username === user.username && d.status === 'completed').length;
+      const duelsPlayed = duels.filter(d => (d.challenger_username === user.username || d.opponent_username === user.username) && d.status === 'completed').length;
+      
+      return {
+        id: user.id,
+        username: user.username,
+        fullName: user.full_name,
+        mysticPhrase: user.mystic_phrase,
+        whatsapp: user.whatsapp,
+        stripeColor1: user.stripe_color_1,
+        stripeColor2: user.stripe_color_2,
+        pattern: user.pattern || 'diagonal',
+        points: duelsWon * 2,
+        duelsWon,
+        duelsPlayed
+      };
+    });
+
+    return ranked.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.duelsWon !== a.duelsWon) return b.duelsWon - a.duelsWon;
+      return (a.username || '').localeCompare(b.username || '');
+    });
+  };
+
+  const leaderboardPhase1 = getLeaderboardByStage(1);
+  const leaderboardPhase2 = getLeaderboardByStage(2);
+  const leaderboardDuels = getLeaderboardDuels();
+
+  // Determinar la tabla de posiciones activa para los castigos visuales (Fase 2 si ya empezó, sino Fase 1)
+  const hasPhase2MatchesPlayed = matches.some(m => (m.stage === 2 || m.id >= 73) && m.status === 'played');
+  const leaderboard = hasPhase2MatchesPlayed ? leaderboardPhase2 : leaderboardPhase1;
 
   // Buscar si el usuario actual sufre el castigo (mitad inferior)
   const loggedInRankIndex = leaderboard.findIndex(p => p.id === currentUser?.id);
@@ -1064,7 +1120,7 @@ function App() {
           .update(updates)
           .eq('id', currentUser.id);
 
-        if (error && (error.code === '42703' || error.message?.includes('pattern'))) {
+        if (error && (error.code === '42703' || error.code === 'PGRST104' || error.message?.toLowerCase().includes('pattern'))) {
           // Si la columna 'pattern' no existe en la base de datos, reintentamos excluyéndola
           const { pattern, ...updatesWithoutPattern } = updates;
           const retry = await supabase.from('participants')
@@ -1125,10 +1181,15 @@ function App() {
   const handlePredictionChange = async (matchId, team, value) => {
     if (!currentUser || !currentTenant) return;
 
-    // Validación de fecha límite: 10 de Junio de 2026 a las 23:59:00
-    const closingTime = new Date('2026-06-10T23:59:00');
+    // Validación de fecha límite dinámica
+    const targetMatch = matches.find(m => m.id === matchId);
+    const matchStage = targetMatch?.stage || (matchId >= 73 ? 2 : 1);
+    const closingTime = matchStage === 2 ? new Date('2026-06-28T00:00:00') : new Date('2026-06-10T23:59:00');
     if (new Date() >= closingTime) {
-      alert('La carga y modificación de pronósticos finalizó el 10 de Junio de 2026 a las 23:59 (día previo al inicio del mundial).');
+      alert(matchStage === 2 
+        ? 'La carga y modificación de pronósticos de Fase 2 finalizó el 28 de Junio de 2026 a las 00:00.'
+        : 'La carga y modificación de pronósticos finalizó el 10 de Junio de 2026 a las 23:59 (día previo al inicio del mundial).'
+      );
       return;
     }
 
@@ -1323,10 +1384,10 @@ function App() {
   const handleImportUserBackup = (e) => {
     if (!currentUser || !currentTenant) return;
     
-    // VALIDACIÓN DE FECHA LÍMITE: 10 de Junio de 2026 a las 23:59:00 (Día previo al inicio del mundial)
-    const closingTime = new Date('2026-06-10T23:59:00');
-    if (new Date() >= closingTime) {
-      alert('La importación y modificación de pronósticos finalizó el 10 de Junio de 2026 a las 23:59 (día previo al inicio del mundial).');
+    // VALIDACIÓN DE FECHA LÍMITE GENERAL: Si ya pasó el cierre de Fase 2, todo está cerrado
+    const closingTimePhase2 = new Date('2026-06-28T00:00:00');
+    if (new Date() >= closingTimePhase2) {
+      alert('La importación y modificación de todos los pronósticos ha finalizado.');
       return;
     }
     
@@ -1350,10 +1411,21 @@ function App() {
         }
 
         const predsToImport = parsedData.predictions;
-        const matchIds = Object.keys(predsToImport);
+        
+        // Filtrar pronósticos para importar solo los de partidos no cerrados
+        const filteredPredsToImport = {};
+        Object.keys(predsToImport).forEach(matchId => {
+          const mIdInt = parseInt(matchId);
+          const targetMatch = matches.find(m => m.id === mIdInt);
+          if (!isMatchPredictionsClosed(targetMatch)) {
+            filteredPredsToImport[matchId] = predsToImport[matchId];
+          }
+        });
+
+        const matchIds = Object.keys(filteredPredsToImport);
         
         if (matchIds.length === 0) {
-          alert('El archivo no contiene pronósticos.');
+          alert('El archivo no contiene pronósticos válidos o todos los partidos ya se encuentran cerrados.');
           return;
         }
 
@@ -1361,7 +1433,7 @@ function App() {
         
         if (isSupabaseConnected && supabase) {
           for (const matchId of matchIds) {
-            const pred = predsToImport[matchId];
+            const pred = filteredPredsToImport[matchId];
             if (pred && (pred.scoreA !== '' || pred.scoreB !== '')) {
               try {
                 const predictionRow = {
@@ -1398,11 +1470,11 @@ function App() {
           ...prev,
           [keyId]: {
             ...prev[keyId],
-            ...predsToImport
+            ...filteredPredsToImport
           },
           [keyUsername]: {
             ...prev[keyUsername],
-            ...predsToImport
+            ...filteredPredsToImport
           }
         }));
 
@@ -1450,7 +1522,7 @@ function App() {
   };
 
   // Guardar puntuación de partido de forma manual por el Admin
-  const handleSaveMatchScoreManual = async (matchId, scoreA, scoreB, status) => {
+  const handleSaveMatchScoreManual = async (matchId, scoreA, scoreB, status, teamA, flagA, teamB, flagB) => {
     if (!currentUser?.isAdmin) {
       alert("Solo el administrador puede actualizar los resultados oficiales.");
       return;
@@ -1461,18 +1533,24 @@ function App() {
 
     if (isSupabaseConnected && supabase) {
       try {
+        const updatePayload = {
+          actual_score_a: parsedA,
+          actual_score_b: parsedB,
+          status: status
+        };
+        if (teamA !== undefined) updatePayload.team_a = teamA;
+        if (flagA !== undefined) updatePayload.flag_a = flagA;
+        if (teamB !== undefined) updatePayload.team_b = teamB;
+        if (flagB !== undefined) updatePayload.flag_b = flagB;
+
         const { error } = await supabase
           .from('matches')
-          .update({
-            actual_score_a: parsedA,
-            actual_score_b: parsedB,
-            status: status
-          })
+          .update(updatePayload)
           .eq('id', matchId);
         if (error) throw error;
-        alert("Marcador oficial actualizado correctamente.");
+        alert("Partido actualizado correctamente.");
       } catch (err) {
-        alert("Error al actualizar marcador en Supabase: " + err.message);
+        alert("Error al actualizar partido en Supabase: " + err.message);
       }
     }
 
@@ -1480,7 +1558,11 @@ function App() {
       ...m,
       actualScoreA: parsedA,
       actualScoreB: parsedB,
-      status: status
+      status: status,
+      teamA: teamA !== undefined ? teamA : m.teamA,
+      flagA: flagA !== undefined ? flagA : m.flagA,
+      teamB: teamB !== undefined ? teamB : m.teamB,
+      flagB: flagB !== undefined ? flagB : m.flagB
     } : m));
   };
 
@@ -1498,7 +1580,11 @@ function App() {
             ...match,
             actualScoreA: liveResult.actualScoreA,
             actualScoreB: liveResult.actualScoreB,
-            status: liveResult.status
+            status: liveResult.status,
+            teamA: liveResult.teamA !== undefined ? liveResult.teamA : match.teamA,
+            flagA: liveResult.flagA !== undefined ? liveResult.flagA : match.flagA,
+            teamB: liveResult.teamB !== undefined ? liveResult.teamB : match.teamB,
+            flagB: liveResult.flagB !== undefined ? liveResult.flagB : match.flagB
           };
         }
         return match;
@@ -1506,12 +1592,18 @@ function App() {
 
       if (isSupabaseConnected && supabase) {
         for (const item of data) {
+          const updatePayload = {
+            actual_score_a: item.actualScoreA,
+            actual_score_b: item.actualScoreB,
+            status: item.status
+          };
+          if (item.teamA !== undefined) updatePayload.team_a = item.teamA;
+          if (item.flagA !== undefined) updatePayload.flag_a = item.flagA;
+          if (item.teamB !== undefined) updatePayload.team_b = item.teamB;
+          if (item.flagB !== undefined) updatePayload.flag_b = item.flagB;
+
           await supabase.from('matches')
-            .update({
-              actual_score_a: item.actualScoreA,
-              actual_score_b: item.actualScoreB,
-              status: item.status
-            })
+            .update(updatePayload)
             .eq('id', item.id);
         }
       }
@@ -1966,6 +2058,38 @@ function App() {
                 </div>
               )}
 
+              {/* Copias de seguridad de pronósticos */}
+              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.25rem', textAlign: 'left' }}>
+                <h4 style={{ fontSize: '0.95rem', color: 'var(--accent-color)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  💾 Copia de Seguridad de Pronósticos
+                </h4>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  Guarda tus pronósticos en un archivo JSON o restáuralos en caso de que lo necesites.
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button"
+                    className="btn-secondary" 
+                    onClick={handleExportUserBackup} 
+                    style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.75rem', flex: '1 1 auto', justifyContent: 'center' }}
+                  >
+                    📥 Exportar Backup (.JSON)
+                  </button>
+                  <label 
+                    className="btn-secondary" 
+                    style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.75rem', flex: '1 1 auto', textAlign: 'center', cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    📤 Importar Backup
+                    <input 
+                      type="file" 
+                      accept=".json" 
+                      onChange={handleImportUserBackup} 
+                      style={{ display: 'none' }} 
+                    />
+                  </label>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                 <button type="submit" className="btn-primary">Guardar</button>
                 <button type="button" className="btn-secondary" onClick={() => setIsEditingProfile(false)}>Cancelar</button>
@@ -2181,7 +2305,17 @@ function App() {
 
                 {currentMatch ? (
                   <div className="glass-card text-center" style={{ maxWidth: '550px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-                    <div className="match-header" style={{ justifyContent: 'center', gap: '1rem' }}>
+                    <div className="match-header" style={{ justifyContent: 'center', gap: '1rem', alignItems: 'center' }}>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        background: (currentMatch.stage === 2 || currentMatch.id >= 73) ? 'gold' : 'rgba(255,255,255,0.1)', 
+                        color: (currentMatch.stage === 2 || currentMatch.id >= 73) ? '#000' : '#fff', 
+                        padding: '0.15rem 0.4rem', 
+                        borderRadius: '4px', 
+                        fontWeight: 'bold'
+                      }}>
+                        {(currentMatch.stage === 2 || currentMatch.id >= 73) ? 'Fase Final' : 'Fase de Grupos'}
+                      </span>
                       <strong>{currentMatch.group}</strong> • <span>{currentMatch.date}</span>
                     </div>
 
@@ -2193,9 +2327,9 @@ function App() {
                       </div>
                     )}
 
-                    {currentMatch.status !== 'played' && isPredictionsClosed && (
+                    {currentMatch.status !== 'played' && isMatchPredictionsClosed(currentMatch) && (
                       <div style={{ color: '#ffb703', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem', background: 'rgba(255, 183, 3, 0.1)', padding: '0.5rem', borderRadius: '4px' }}>
-                        🔒 Pronósticos cerrados por fecha límite (10 de Junio 23:59).
+                        🔒 Pronósticos cerrados por fecha límite ({(currentMatch.stage === 2 || currentMatch.id >= 73) ? '28 de Junio 00:00' : '10 de Junio 23:59'}).
                       </div>
                     )}
 
@@ -2217,7 +2351,7 @@ function App() {
                              style={{ width: '70px', height: '70px', fontSize: '2rem' }}
                              value={currentUserPrediction?.scoreA ?? ''}
                              onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreA', e.target.value)}
-                             disabled={currentMatch.status === 'played' || isPredictionsClosed}
+                             disabled={currentMatch.status === 'played' || isMatchPredictionsClosed(currentMatch)}
                            />
                            <span className="score-separator" style={{ fontSize: '2rem' }}>-</span>
                            <input
@@ -2227,7 +2361,7 @@ function App() {
                              style={{ width: '70px', height: '70px', fontSize: '2rem' }}
                              value={currentUserPrediction?.scoreB ?? ''}
                              onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreB', e.target.value)}
-                             disabled={currentMatch.status === 'played' || isPredictionsClosed}
+                             disabled={currentMatch.status === 'played' || isMatchPredictionsClosed(currentMatch)}
                            />
                         </div>
 
@@ -2353,37 +2487,6 @@ function App() {
                       </button>
                     </div>
 
-                    {/* Copias de seguridad de pronósticos */}
-                    <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', textAlign: 'left' }}>
-                      <h4 style={{ fontSize: '1rem', color: 'var(--accent-color)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        💾 Copia de Seguridad de Pronósticos
-                      </h4>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                        Guarda tus pronósticos en tu dispositivo en un archivo JSON o restáuralos desde una copia previa si ocurre algún error.
-                      </p>
-                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        <button 
-                          className="btn-secondary" 
-                          onClick={handleExportUserBackup} 
-                          style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.8rem', flex: '1 1 auto', justifyContent: 'center' }}
-                        >
-                          📥 Exportar mi Backup (.JSON)
-                        </button>
-                        <label 
-                          className="btn-secondary" 
-                          style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.8rem', flex: '1 1 auto', textAlign: 'center', cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          📤 Importar desde Backup
-                          <input 
-                            type="file" 
-                            accept=".json" 
-                            onChange={handleImportUserBackup} 
-                            style={{ display: 'none' }} 
-                          />
-                        </label>
-                      </div>
-                    </div>
-
                   </div>
                 ) : (
                   <p className="text-center" style={{ color: 'var(--text-secondary)' }}>No hay partidos para el grupo seleccionado.</p>
@@ -2394,13 +2497,15 @@ function App() {
             {/* PESTAÑA: Tabla de Posiciones */}
             {activeTab === 'leaderboard' && (
               <div className="glass-card">
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>🏆 Clasificación del Grupo</h2>
-                
-                {/* Cartel de Advertencia de Poderes */}
-                <div style={{ background: 'rgba(255, 77, 77, 0.05)', border: '1px solid rgba(255, 77, 77, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.4' }}>
-                  📢 <strong>Regla del Campeón</strong>: El líder absoluto (Puesto #1) tiene el poder de castigar visualmente a los "Losers" (mitad inferior de la tabla) personalizando sus colores de fondo a rayas continuas y estampando su Frase Mística de forma permanente en sus pantallas. ¡Haz clic en tu apodo arriba para personalizar!
-                </div>
-                <div style={{ overflowX: 'auto' }}>
+                {/* TABLA DE FASE 2 */}
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  🏆 Tabla Fase Final (Fase 2)
+                  <span style={{ fontSize: '0.8rem', background: 'gold', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 2</span>
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                  Standings para la Fase de Eliminación directa (Octavos de Final, Cuartos, Semifinal y Final). Comienza en 0 pts.
+                </p>
+                <div style={{ overflowX: 'auto', marginBottom: '3rem' }}>
                   <table className="leaderboard-table">
                     <thead>
                       <tr>
@@ -2411,7 +2516,46 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {leaderboard.map((row, idx) => (
+                      {leaderboardPhase2.map((row, idx) => (
+                        <tr key={row.id} className="leaderboard-row">
+                          <td className="rank-cell">{idx + 1}º</td>
+                          <td>
+                            <span
+                              style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
+                              title="Haz clic para ver el perfil"
+                              onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
+                            >
+                              {row.username}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>{row.exactScores} ⭐</td>
+                          <td className="points-cell" style={{ color: 'gold', fontWeight: 'bold' }}>{row.points} pts</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* TABLA DE FASE 1 */}
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
+                  🏆 Tabla Fase de Grupos (Fase 1)
+                  <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 1</span>
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                  Standings finales e inalterables de la Fase de Grupos.
+                </p>
+                <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+                  <table className="leaderboard-table">
+                    <thead>
+                      <tr>
+                        <th>Pos</th>
+                        <th>Apodo (Nickname)</th>
+                        <th style={{ textAlign: 'center' }}>Marcadores Exactos</th>
+                        <th style={{ textAlign: 'right' }}>Puntos Totales</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaderboardPhase1.map((row, idx) => (
                         <tr key={row.id} className="leaderboard-row">
                           <td className="rank-cell">{idx + 1}º</td>
                           <td>
@@ -2429,6 +2573,11 @@ function App() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Cartel de Advertencia de Poderes */}
+                <div style={{ background: 'rgba(255, 77, 77, 0.05)', border: '1px solid rgba(255, 77, 77, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.4', marginTop: '2rem' }}>
+                  📢 <strong>Regla del Campeón</strong>: El líder absoluto (Puesto #1 de la fase activa) tiene el poder de castigar visualmente a los "Losers" (mitad inferior de la tabla) personalizando sus colores de fondo a rayas continuas y estampando su Frase Mística de forma permanente en sus pantallas. ¡Haz clic en tu apodo arriba para personalizar!
                 </div>
 
                 {/* Sección de Desglose de Puntos por Partido Jugado */}
@@ -2742,8 +2891,45 @@ function App() {
                             const scoreA = e.target.elements.scoreA.value;
                             const scoreB = e.target.elements.scoreB.value;
                             const status = e.target.elements.status.value;
-                            handleSaveMatchScoreManual(match.id, scoreA, scoreB, status);
+                            const teamA = e.target.elements.teamA?.value;
+                            const flagA = e.target.elements.flagA?.value;
+                            const teamB = e.target.elements.teamB?.value;
+                            const flagB = e.target.elements.flagB?.value;
+                            handleSaveMatchScoreManual(match.id, scoreA, scoreB, status, teamA, flagA, teamB, flagB);
                           }} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {(match.stage === 2 || match.id >= 73) && (
+                              <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
+                                <input 
+                                  type="text" 
+                                  name="flagA" 
+                                  placeholder="Bandera A" 
+                                  defaultValue={match.flagA ?? ''} 
+                                  style={{ width: '40px', padding: '0.25rem', fontSize: '0.9rem', textAlign: 'center', background: 'var(--form-bg)', border: '1px solid var(--glass-border)', color: 'var(--input-color)', borderRadius: '4px' }} 
+                                />
+                                <input 
+                                  type="text" 
+                                  name="teamA" 
+                                  placeholder="Equipo A" 
+                                  defaultValue={match.teamA ?? ''} 
+                                  style={{ width: '90px', padding: '0.25rem', fontSize: '0.9rem', background: 'var(--form-bg)', border: '1px solid var(--glass-border)', color: 'var(--input-color)', borderRadius: '4px' }} 
+                                />
+                                <span>vs</span>
+                                <input 
+                                  type="text" 
+                                  name="teamB" 
+                                  placeholder="Equipo B" 
+                                  defaultValue={match.teamB ?? ''} 
+                                  style={{ width: '90px', padding: '0.25rem', fontSize: '0.9rem', background: 'var(--form-bg)', border: '1px solid var(--glass-border)', color: 'var(--input-color)', borderRadius: '4px' }} 
+                                />
+                                <input 
+                                  type="text" 
+                                  name="flagB" 
+                                  placeholder="Bandera B" 
+                                  defaultValue={match.flagB ?? ''} 
+                                  style={{ width: '40px', padding: '0.25rem', fontSize: '0.9rem', textAlign: 'center', background: 'var(--form-bg)', border: '1px solid var(--glass-border)', color: 'var(--input-color)', borderRadius: '4px' }} 
+                                />
+                              </div>
+                            )}
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
                               <input 
                                 type="number" 
@@ -2953,7 +3139,7 @@ function App() {
                 </h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                   ¿Aburrido esperando el mundial? Desafía a tus amigos a <strong>Piedra, Papel o Tijera</strong>. 
-                  ¡Cada duelo ganado suma <strong>+2 puntos</strong> en la Tabla General de posiciones!
+                  ¡Cada duelo ganado suma <strong>+2 puntos</strong> en la Tabla de Duelos independiente de abajo!
                 </p>
 
                 {/* Sección Desafíos Pendientes por responder */}
@@ -3237,7 +3423,48 @@ function App() {
                         })}
                       </div>
                     );
-                  })()}
+                  })()
+                }</div>
+
+                {/* TABLA DE POSICIONES DE DUELOS */}
+                <div className="glass-card mb-4" style={{ marginTop: '2rem' }}>
+                  <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-color)', marginBottom: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    🏆 Tabla de Posiciones de Duelos
+                  </h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                    Clasificación exclusiva basada en los minijuegos de Piedra, Papel o Tijera. Se suman +2 puntos por victoria.
+                  </p>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="leaderboard-table" style={{ fontSize: '0.9rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Pos</th>
+                          <th>Participante</th>
+                          <th style={{ textAlign: 'center' }}>Duelos Jugados</th>
+                          <th style={{ textAlign: 'center' }}>Victorias</th>
+                          <th style={{ textAlign: 'right' }}>Puntos acumulados</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leaderboardDuels.map((row, idx) => {
+                          const isCurrentUser = row.id === currentUser?.id;
+                          return (
+                            <tr key={row.id} className="leaderboard-row" style={{ background: isCurrentUser ? 'rgba(0, 255, 135, 0.04)' : 'transparent' }}>
+                              <td className="rank-cell" style={{ fontWeight: isCurrentUser ? 'bold' : 'normal' }}>{idx + 1}º</td>
+                              <td>
+                                <span style={{ fontWeight: isCurrentUser ? 'bold' : 'normal', color: isCurrentUser ? 'var(--accent-color)' : 'var(--text-primary)' }}>
+                                  {row.username} {isCurrentUser && ' (Tú)'}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>{row.duelsPlayed}</td>
+                              <td style={{ textAlign: 'center', color: 'var(--accent-color)', fontWeight: 'bold' }}>{row.duelsWon} ⚔️</td>
+                              <td className="points-cell" style={{ textAlign: 'right' }}>{row.points} pts</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
