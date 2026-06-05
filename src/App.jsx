@@ -199,6 +199,20 @@ function App() {
     };
   }, [currentTenant, currentUser]);
 
+  // Polling para refrescar los duelos y desafíos en tiempo real cada 8 segundos
+  useEffect(() => {
+    if (!currentTenant) return;
+    
+    // Carga inicial
+    loadDuelsForTenant(currentTenant.id);
+
+    const timer = setInterval(() => {
+      loadDuelsForTenant(currentTenant.id);
+    }, 8000);
+
+    return () => clearInterval(timer);
+  }, [currentTenant]);
+
   // Decrementar el cooldown de boludeo segundo a segundo
   useEffect(() => {
     if (boludeoCooldown <= 0) return;
@@ -1470,7 +1484,15 @@ function App() {
 
       {/* Cabecera */}
       <header className="app-header" style={{ position: 'relative', zIndex: 10 }}>
-        <div className="logo-container">
+        <div 
+          className="logo-container" 
+          onClick={() => {
+            if (currentUser && currentTenant) {
+              setActiveTab('predictions');
+            }
+          }}
+          style={{ cursor: (currentUser && currentTenant) ? 'pointer' : 'default' }}
+        >
           <span className="logo-icon">🏆</span>
           <div>
             <h1 className="logo-text">PRODE Mundial 2026</h1>
@@ -1500,6 +1522,33 @@ function App() {
           )}
         </div>
       </header>
+
+      {/* Aviso global de Duelo Pendiente */}
+      {currentUser && currentTenant && (() => {
+        const pendingCount = duels.filter(d => d.opponent_username === currentUser.username && d.status === 'pending').length;
+        if (pendingCount === 0) return null;
+        return (
+          <div 
+            onClick={() => setActiveTab('duels')}
+            style={{ 
+              background: 'linear-gradient(90deg, #ff4d4d, #f1a80a)', 
+              color: '#fff', 
+              textAlign: 'center', 
+              padding: '0.65rem 1rem', 
+              fontSize: '0.85rem', 
+              fontWeight: 'bold', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              borderBottom: '1px solid rgba(255,255,255,0.1)'
+            }}
+          >
+            <span>⚔️ ¡Tienes {pendingCount} {pendingCount === 1 ? 'desafío' : 'desafíos'} de Piedra, Papel o Tijera pendiente! Haz clic aquí para jugar.</span>
+          </div>
+        );
+      })()}
 
       {/* MODAL: Detalles del perfil */}
       {userProfileModal && (
@@ -2468,25 +2517,25 @@ function App() {
                   const pendingToMe = duels.filter(d => d.opponent_username === currentUser.username && d.status === 'pending');
                   if (pendingToMe.length === 0) return null;
                   return (
-                    <div className="glass-card mb-4 animate-fade-in" style={{ borderLeft: '4px solid #ff4d4d', background: 'rgba(255, 77, 77, 0.03)' }}>
+                    <div className="glass-card mb-4 animate-fade-in" style={{ borderLeft: '4px solid #ff4d4d', background: 'var(--bg-secondary)', borderTop: '1px solid var(--glass-border)', borderRight: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)' }}>
                       <h4 style={{ color: '#ff4d4d', marginBottom: '0.75rem', fontWeight: 'bold' }}>
                         🚨 Tienes {pendingToMe.length} {pendingToMe.length === 1 ? 'Desafío Pendiente' : 'Desafíos Pendientes'}
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {pendingToMe.map(d => (
-                          <div key={d.id} style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div key={d.id} style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                              <span><strong>{d.challenger_username}</strong> te desafió a un duelo.</span>
+                              <span style={{ color: 'var(--text-primary)' }}><strong style={{ color: 'var(--accent-color)' }}>{d.challenger_username}</strong> te desafió a un duelo.</span>
                               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(d.created_at || Date.now()).toLocaleDateString()}</span>
                             </div>
                             {d.challenger_message && (
-                              <p style={{ fontStyle: 'italic', color: '#ffb703', margin: '0.5rem 0', fontSize: '0.9rem' }}>
+                              <p style={{ fontStyle: 'italic', color: 'var(--primary-gold)', margin: '0.5rem 0', fontSize: '0.9rem', fontWeight: 'bold' }}>
                                 "{d.challenger_message}"
                               </p>
                             )}
 
                             {selectedReplyDuel?.id === d.id ? (
-                              <form onSubmit={handleReplyDuel} style={{ marginTop: '1rem', background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '8px' }}>
+                              <form onSubmit={handleReplyDuel} style={{ marginTop: '1rem', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
                                 <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>ELIGE TU MOVIMIENTO:</label>
                                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                                   <button type="button" className={`btn-secondary ${replyMove === 'rock' ? 'active' : ''}`} onClick={() => setReplyMove('rock')} style={{ flex: 1, padding: '0.75rem', borderColor: replyMove === 'rock' ? '#00ff87' : 'var(--glass-border)' }}>
@@ -2500,8 +2549,8 @@ function App() {
                                   </button>
                                 </div>
                                 <div className="form-group">
-                                  <label>CONTRACANASTA / MENSAJE ÁCIDO:</label>
-                                  <input type="text" className="form-control" placeholder="Ej. ¡Sos malísimo! Tomá pa que guardes..." value={replyChicana} onChange={(e) => setReplyChicana(e.target.value)} />
+                                  <label style={{ color: 'var(--text-secondary)' }}>CONTRACANASTA / MENSAJE ÁCIDO:</label>
+                                  <input type="text" className="form-control" style={{ background: 'var(--form-bg)', color: 'var(--input-color)', border: '1px solid var(--glass-border)' }} placeholder="Ej. ¡Sos malísimo! Tomá pa que guardes..." value={replyChicana} onChange={(e) => setReplyChicana(e.target.value)} />
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                   <button type="submit" className="btn-primary" style={{ width: 'auto', background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)' }}>
@@ -2712,7 +2761,12 @@ function App() {
                       (d.challenger_username === currentUser.username || d.opponent_username === currentUser.username)
                     );
                     if (myMessages.length === 0) {
-                      return <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No tienes descargos enviados ni recibidos todavía.</p>;
+                      return (
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                          <p>Muro de descargos de duelos finalizados. Cuando el perdedor envíe su excusa en el historial, aparecerá aquí.</p>
+                          <p style={{ marginTop: '0.5rem', fontStyle: 'italic' }}>Aún no tienes descargos enviados ni recibidos.</p>
+                        </div>
+                      );
                     }
                     return (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2721,17 +2775,17 @@ function App() {
                           const recipient = isSentByMe ? d.winner_username : (d.challenger_username === currentUser.username ? d.opponent_username : d.challenger_username);
                           return (
                             <div key={d.id} style={{ 
-                              background: 'rgba(0,0,0,0.3)', 
+                              background: 'var(--bg-secondary)', 
                               padding: '1rem', 
                               borderRadius: '8px', 
                               borderLeft: isSentByMe ? '4px solid #ff4d4d' : '4px solid #00ff87',
-                              border: '1px solid rgba(255,255,255,0.04)'
+                              border: '1px solid var(--glass-border)'
                             }}>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
                                 <span>{isSentByMe ? '⬆️ Enviado a: ' + recipient : '⬇️ Recibido de: ' + recipient}</span>
                                 <span>{new Date(d.created_at || Date.now()).toLocaleDateString()}</span>
                               </div>
-                              <p style={{ margin: 0, fontSize: '0.9rem', color: 'white', fontStyle: 'italic', fontWeight: 500 }}>
+                              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-primary)', fontStyle: 'italic', fontWeight: 500 }}>
                                 "{d.loser_response}"
                               </p>
                             </div>
