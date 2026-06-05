@@ -1323,6 +1323,13 @@ function App() {
   const handleImportUserBackup = (e) => {
     if (!currentUser || !currentTenant) return;
     
+    // VALIDACIÓN DE FECHA LÍMITE: 10 de Junio de 2026 a las 23:59:00 (Día previo al inicio del mundial)
+    const closingTime = new Date('2026-06-10T23:59:00');
+    if (new Date() >= closingTime) {
+      alert('La importación y modificación de pronósticos finalizó el 10 de Junio de 2026 a las 23:59 (día previo al inicio del mundial).');
+      return;
+    }
+    
     const fileReader = new FileReader();
     const file = e.target.files[0];
     if (!file) return;
