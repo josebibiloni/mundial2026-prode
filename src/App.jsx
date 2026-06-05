@@ -373,6 +373,35 @@ function App() {
         // Cargar Partidos
         let { data: dbMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
         if (dbMatches && dbMatches.length > 0) {
+          // Si el total en la DB es menor que el fixture configurado (ej. tiene 10 y ahora son 72),
+          // autocompletamos con los partidos faltantes para sanar la base de datos automáticamente.
+          if (dbMatches.length < initialMatches.length) {
+            const existingIds = new Set(dbMatches.map(m => m.id));
+            const missingMatches = initialMatches.filter(m => !existingIds.has(m.id));
+            if (missingMatches.length > 0) {
+              const dbSeed = missingMatches.map(m => ({
+                id: m.id,
+                team_a: m.teamA,
+                flag_a: m.flagA,
+                team_b: m.teamB,
+                flag_b: m.flagB,
+                group_name: m.group,
+                match_date: m.date,
+                stadium: m.stadium,
+                actual_score_a: m.actualScoreA,
+                actual_score_b: m.actualScoreB,
+                status: m.status
+              }));
+              await supabase.from('matches').insert(dbSeed);
+              
+              // Volver a cargar para tener todos los partidos sincronizados
+              let { data: reloadedMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
+              if (reloadedMatches && reloadedMatches.length > 0) {
+                dbMatches = reloadedMatches;
+              }
+            }
+          }
+
           const mappedMatches = dbMatches.map(m => ({
             id: m.id,
             teamA: m.team_a,
@@ -1860,15 +1889,13 @@ function App() {
                       onChange={(e) => handleGroupFilterChange(e.target.value)}
                     >
                       <option value="Todos">Todos los partidos</option>
-                      <option value="Grupo A">Grupo A</option>
-                      <option value="Grupo B">Grupo B</option>
-                      <option value="Grupo C">Grupo C</option>
-                      <option value="Grupo D">Grupo D</option>
-                      <option value="Grupo E">Grupo E</option>
-                      <option value="Grupo F">Grupo F</option>
-                      <option value="Grupo G">Grupo G</option>
-                      <option value="Grupo H">Grupo H</option>
-                      <option value="Grupo I">Grupo I</option>
+                      {Array.from(new Set(matches.map(m => m.group)))
+                        .filter(Boolean)
+                        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+                        .map(groupName => (
+                          <option key={groupName} value={groupName}>{groupName}</option>
+                        ))
+                      }
                     </select>
                   </div>
                 </div>
