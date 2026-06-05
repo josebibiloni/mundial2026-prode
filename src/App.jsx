@@ -1271,6 +1271,13 @@ function App() {
   const filteredMatches = matches.filter(m => selectedGroupFilter === 'Todos' || m.group === selectedGroupFilter);
   const currentMatch = filteredMatches[currentMatchIndex] || null;
 
+  // Obtener pronóstico del usuario actual para el partido activo con fallback a username o ID
+  const currentUserPrediction = (currentUser && currentTenant && currentMatch)
+    ? (predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id] || 
+       predictions[`${currentTenant.id}_${(currentUser.username || '').trim()}`]?.[currentMatch.id] || 
+       null)
+    : null;
+
   const handleNextMatch = () => {
     if (currentMatchIndex < filteredMatches.length - 1) {
       setCurrentMatchIndex(currentMatchIndex + 1);
@@ -1937,7 +1944,7 @@ function App() {
                              min="0"
                              className="score-input"
                              style={{ width: '70px', height: '70px', fontSize: '2rem' }}
-                             value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreA ?? ''}
+                             value={currentUserPrediction?.scoreA ?? ''}
                              onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreA', e.target.value)}
                              disabled={currentMatch.status === 'played' || isPredictionsClosed}
                            />
@@ -1947,7 +1954,7 @@ function App() {
                              min="0"
                              className="score-input"
                              style={{ width: '70px', height: '70px', fontSize: '2rem' }}
-                             value={predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id]?.scoreB ?? ''}
+                             value={currentUserPrediction?.scoreB ?? ''}
                              onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreB', e.target.value)}
                              disabled={currentMatch.status === 'played' || isPredictionsClosed}
                            />
@@ -1965,7 +1972,7 @@ function App() {
                     <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', width: '100%' }}>
                       {currentMatch.status === 'played' ? (
                         (() => {
-                          const pts = calculatePoints(predictions[`${currentTenant.id}_${currentUser.id}`]?.[currentMatch.id], currentMatch);
+                          const pts = calculatePoints(currentUserPrediction, currentMatch);
                           let badgeBg = 'rgba(255, 77, 77, 0.15)';
                           let badgeColor = '#ff4d4d';
                           let comment = '';
