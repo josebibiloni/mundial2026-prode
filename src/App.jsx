@@ -53,6 +53,7 @@ function App() {
   const [editMysticInput, setEditMysticInput] = useState('');
   const [editColor1Input, setEditColor1Input] = useState('#ff0055');
   const [editColor2Input, setEditColor2Input] = useState('#00ff87');
+  const [editPatternInput, setEditPatternInput] = useState('diagonal');
 
   // Popup de Chicanas
   const [showBanterPopup, setShowBanterPopup] = useState(false);
@@ -1638,6 +1639,7 @@ function App() {
                     setEditMysticInput(currentUser.mysticPhrase || '');
                     setEditColor1Input(currentUser.stripeColor1 || '#ff0055');
                     setEditColor2Input(currentUser.stripeColor2 || '#00ff87');
+                    setEditPatternInput(currentUser.pattern || 'diagonal');
                     setIsEditingProfile(true);
                   }}>
                     👑 <strong>{currentUser.username}</strong>
@@ -1755,6 +1757,20 @@ function App() {
                         onChange={(e) => setEditColor2Input(e.target.value)}
                       />
                     </div>
+                  </div>
+                  <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                    <label>Patrón de Fondo</label>
+                    <select 
+                      className="form-control"
+                      value={editPatternInput}
+                      onChange={(e) => setEditPatternInput(e.target.value)}
+                      style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)', color: '#fff', height: '38px' }}
+                    >
+                      <option value="diagonal">Líneas Diagonales</option>
+                      <option value="horizontal">Líneas Horizontales</option>
+                      <option value="vertical">Líneas Verticales</option>
+                      <option value="checkers">Tablero de Ajedrez</option>
+                    </select>
                   </div>
                 </div>
               )}
