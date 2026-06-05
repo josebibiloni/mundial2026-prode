@@ -1060,9 +1060,18 @@ function App() {
           pattern: editPatternInput
         };
 
-        const { error } = await supabase.from('participants')
+        let { error } = await supabase.from('participants')
           .update(updates)
           .eq('id', currentUser.id);
+
+        if (error && (error.code === '42703' || error.message?.includes('pattern'))) {
+          // Si la columna 'pattern' no existe en la base de datos, reintentamos excluyéndola
+          const { pattern, ...updatesWithoutPattern } = updates;
+          const retry = await supabase.from('participants')
+            .update(updatesWithoutPattern)
+            .eq('id', currentUser.id);
+          error = retry.error;
+        }
 
         if (error) throw error;
 
