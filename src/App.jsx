@@ -151,6 +151,19 @@ function App() {
   const [newUserPin, setNewUserPin] = useState(''); // PIN (4 digitos)
   const [isAdminRegister, setIsAdminRegister] = useState(false);
 
+  // Recuperación de PIN y Base de Datos dinámica
+  const [dbHasRecoveryColumns, setDbHasRecoveryColumns] = useState(false);
+  const [regRecoveryQuestion, setRegRecoveryQuestion] = useState("¿En tu equipo glorioso, cuál es el número de tu camiseta?");
+  const [regRecoveryAnswer, setRegRecoveryAnswer] = useState('');
+  
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [recoveryWhatsapp, setRecoveryWhatsapp] = useState('');
+  const [recoveryStep, setRecoveryStep] = useState(1); // 1: whatsapp, 2: pregunta, 3: revelar
+  const [recoveryUser, setRecoveryUser] = useState(null);
+  const [recoveryAnswerInput, setRecoveryAnswerInput] = useState('');
+  const [recoveredPin, setRecoveredPin] = useState('');
+  const [recoveryError, setRecoveryError] = useState('');
+
   // Login
   const [loginWhatsapp, setLoginWhatsapp] = useState(''); // Whatsapp (8 digitos)
   const [loginPin, setLoginPin] = useState(''); // PIN (4 digitos)
@@ -158,7 +171,27 @@ function App() {
   // Carga inicial y listeners de DB
   useEffect(() => {
     fetchInitialData();
+    checkRecoveryColumns();
   }, []);
+
+  const checkRecoveryColumns = async () => {
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { error } = await supabase
+          .from('participants')
+          .select('recovery_question, recovery_answer, recovery_log')
+          .limit(1);
+        if (!error) {
+          setDbHasRecoveryColumns(true);
+        } else {
+          console.warn("Columnas de recuperación no detectadas en Supabase:", error.message);
+          setDbHasRecoveryColumns(false);
+        }
+      } catch (e) {
+        setDbHasRecoveryColumns(false);
+      }
+    }
+  };
 
   // Escuchar enlaces de invitación por URL (?invite=true&tenant=caseros2026)
   useEffect(() => {
@@ -1017,51 +1050,74 @@ function App() {
       pin: cleanPin,
       is_admin: isAdminRegister,
       stripe_color_1: '#ff0055',
-      stripe_color_2: '#00ff87'
+      stripe_color_2: '#00ff87',
+      ...(dbHasRecoveryColumns ? {
+        recovery_question: regRecoveryQuestion,
+        recovery_answer: regRecoveryAnswer.trim().toLowerCase(),
+        recovery_log: []
+      } : {})
+    };
+
+    const proceedRegisterSuccess = async (registeredUser) => {
+      setNewUserName('');
+      setNewUserFullName('');
+      setNewUserMystic('');
+      setNewUserWhatsapp('');
+      setNewUserPin('');
+      setRegRecoveryAnswer('');
+      setIsAdminRegister(false);
+
+      const loggedUser = {
+        id: registeredUser.id,
+        username: registeredUser.username,
+        fullName: registeredUser.full_name,
+        mysticPhrase: registeredUser.mystic_phrase,
+        whatsapp: registeredUser.whatsapp,
+        isAdmin: registeredUser.is_admin,
+        stripeColor1: registeredUser.stripe_color_1,
+        stripeColor2: registeredUser.stripe_color_2,
+        pattern: registeredUser.pattern || 'diagonal'
+      };
+
+      setSetupColor1(registeredUser.stripe_color_1 || '#ff0055');
+      setSetupColor2(registeredUser.stripe_color_2 || '#00ff87');
+      setSetupPattern(registeredUser.pattern || 'diagonal');
+      setSetupPhrase(registeredUser.mystic_phrase || '');
+
+      setCurrentUser(loggedUser);
+      localStorage.setItem('caseros_prode_user', JSON.stringify(loggedUser));
+      localStorage.setItem('caseros_prode_tenant', JSON.stringify(currentTenant));
+      await loadParticipantsForTenant(currentTenant.id);
+      await loadDuelsForTenant(currentTenant.id);
+      
+      const randomIdx = Math.floor(Math.random() * welcomeBanterPhrases.length);
+      setWelcomePopupMessage(welcomeBanterPhrases[randomIdx]);
+      setShowWelcomePopup(true);
+      
+      setActiveTab('predictions');
     };
 
     if (isSupabaseConnected && supabase) {
       try {
         const { data, error } = await supabase.from('participants').insert(newUser).select();
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          const registeredUser = data[0];
-          setNewUserName('');
-          setNewUserFullName('');
-          setNewUserMystic('');
-          setNewUserWhatsapp('');
-          setNewUserPin('');
-          setIsAdminRegister(false);
-
-          const loggedUser = {
-            id: registeredUser.id,
-            username: registeredUser.username,
-            fullName: registeredUser.full_name,
-            mysticPhrase: registeredUser.mystic_phrase,
-            whatsapp: registeredUser.whatsapp,
-            isAdmin: registeredUser.is_admin,
-            stripeColor1: registeredUser.stripe_color_1,
-            stripeColor2: registeredUser.stripe_color_2,
-            pattern: registeredUser.pattern || 'diagonal'
-          };
-
-          setSetupColor1(registeredUser.stripe_color_1 || '#ff0055');
-          setSetupColor2(registeredUser.stripe_color_2 || '#00ff87');
-          setSetupPattern(registeredUser.pattern || 'diagonal');
-          setSetupPhrase(registeredUser.mystic_phrase || '');
-
-          setCurrentUser(loggedUser);
-          localStorage.setItem('caseros_prode_user', JSON.stringify(loggedUser));
-          localStorage.setItem('caseros_prode_tenant', JSON.stringify(currentTenant));
-          await loadParticipantsForTenant(currentTenant.id);
-          await loadDuelsForTenant(currentTenant.id);
-          
-          const randomIdx = Math.floor(Math.random() * welcomeBanterPhrases.length);
-          setWelcomePopupMessage(welcomeBanterPhrases[randomIdx]);
-          setShowWelcomePopup(true);
-          
-          setActiveTab('predictions');
+        if (error) {
+          // Si falló por falta de columnas de recuperación, reintentamos sin ellas
+          if ((error.code === '42703' || error.message?.includes('recovery')) && dbHasRecoveryColumns) {
+            console.warn("Fallo con columnas de recuperación. Reintentando registro básico.");
+            const fallbackUser = { ...newUser };
+            delete fallbackUser.recovery_question;
+            delete fallbackUser.recovery_answer;
+            delete fallbackUser.recovery_log;
+            const { data: retryData, error: retryError } = await supabase.from('participants').insert(fallbackUser).select();
+            if (retryError) throw retryError;
+            if (retryData && retryData.length > 0) {
+              await proceedRegisterSuccess(retryData[0]);
+            }
+          } else {
+            throw error;
+          }
+        } else if (data && data.length > 0) {
+          await proceedRegisterSuccess(data[0]);
         }
       } catch (err) {
         alert('Error en el registro: ' + err.message);
@@ -1310,6 +1366,101 @@ function App() {
       setDuels(prev => prev.map(d => d.id === duelId ? { ...d, loser_response: deletedPlaceholder } : d));
       alert('Descargo de duelo moderado localmente.');
     }
+  };
+
+  const handleResetParticipantPin = async (participantId, username) => {
+    if (!window.confirm(`¿Estás seguro de restablecer el PIN de ${username} a "1234"?`)) return;
+
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { error } = await supabase
+          .from('participants')
+          .update({ pin: '1234' })
+          .eq('id', participantId);
+        if (error) throw error;
+        
+        // Si el usuario restablecido es el usuario actual, actualizar localmente
+        if (currentUser && currentUser.id === participantId) {
+          const updatedUser = { ...currentUser, pin: '1234' };
+          setCurrentUser(updatedUser);
+          localStorage.setItem('caseros_prode_user', JSON.stringify(updatedUser));
+        }
+
+        setParticipants(prev => prev.map(p => p.id === participantId ? { ...p, pin: '1234' } : p));
+        alert(`Se ha restablecido el PIN de ${username} a "1234".`);
+      } catch (err) {
+        alert('Error al restablecer PIN: ' + err.message);
+      }
+    } else {
+      setParticipants(prev => prev.map(p => p.id === participantId ? { ...p, pin: '1234' } : p));
+      alert(`PIN de ${username} restablecido localmente a "1234".`);
+    }
+  };
+
+  const handleOpenRecovery = () => {
+    setRecoveryWhatsapp('');
+    setRecoveryStep(1);
+    setRecoveryUser(null);
+    setRecoveryAnswerInput('');
+    setRecoveredPin('');
+    setRecoveryError('');
+    setShowRecoveryModal(true);
+  };
+
+  const handleLookupWhatsapp = () => {
+    const cleanWhatsapp = recoveryWhatsapp.replace(/\D/g, '').slice(-8);
+    if (cleanWhatsapp.length !== 8) {
+      setRecoveryError('Ingresa un número de WhatsApp de 8 dígitos.');
+      return;
+    }
+    setRecoveryError('');
+
+    const found = participants.find(p => p.whatsapp === cleanWhatsapp);
+    if (!found) {
+      setRecoveryError('No se encontró ningún participante con ese WhatsApp en este grupo.');
+      return;
+    }
+
+    if (!found.recovery_question) {
+      setRecoveryError('Este participante no tiene configurada una pregunta de recuperación.');
+      return;
+    }
+
+    setRecoveryUser(found);
+    setRecoveryStep(2);
+  };
+
+  const handleVerifyRecoveryAnswer = async () => {
+    if (!recoveryUser) return;
+    setRecoveryError('');
+
+    const answerDb = (recoveryUser.recovery_answer || '').trim().toLowerCase();
+    const answerInput = recoveryAnswerInput.trim().toLowerCase();
+
+    if (answerDb !== answerInput) {
+      setRecoveryError('Respuesta incorrecta. Inténtalo de nuevo.');
+      return;
+    }
+
+    // Respuesta correcta: Registrar log de fecha y revelar PIN
+    const logArray = Array.isArray(recoveryUser.recovery_log) ? recoveryUser.recovery_log : [];
+    const updatedLog = [...logArray, new Date().toISOString()];
+
+    if (isSupabaseConnected && supabase && dbHasRecoveryColumns) {
+      try {
+        await supabase.from('participants')
+          .update({ recovery_log: updatedLog })
+          .eq('id', recoveryUser.id);
+      } catch (err) {
+        console.error("Error al registrar log de recuperación en base de datos:", err);
+      }
+    }
+
+    // Actualizar participantes localmente
+    setParticipants(prev => prev.map(p => p.id === recoveryUser.id ? { ...p, recovery_log: updatedLog } : p));
+
+    setRecoveredPin(recoveryUser.pin);
+    setRecoveryStep(3);
   };
 
   // Actualizar participante por el Admin
@@ -2203,7 +2354,16 @@ function App() {
                     required
                   />
                 </div>
-                <button type="submit" className="btn-secondary">Iniciar Sesión</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button type="submit" className="btn-secondary">Iniciar Sesión</button>
+                  <button
+                    type="button"
+                    onClick={handleOpenRecovery}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-color)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.85rem', alignSelf: 'center', width: 'auto', padding: '0.25rem 0.5rem' }}
+                  >
+                    ¿Olvidaste tu PIN?
+                  </button>
+                </div>
               </form>
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '1.5rem 0' }} />
@@ -2263,6 +2423,32 @@ function App() {
                     placeholder="🔑 ****"
                     value={newUserPin}
                     onChange={(e) => setNewUserPin(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Pregunta de Seguridad (para recuperar PIN)</label>
+                  <select
+                    className="form-control"
+                    value={regRecoveryQuestion}
+                    onChange={(e) => setRegRecoveryQuestion(e.target.value)}
+                    required
+                  >
+                    <option value="¿En tu equipo glorioso, cuál es el número de tu camiseta?">¿En tu equipo glorioso, cuál es el número de tu camiseta?</option>
+                    <option value="¿Nombre de tu primera mascota?">¿Nombre de tu primera mascota?</option>
+                    <option value="¿Club de fútbol de tu infancia?">¿Club de fútbol de tu infancia?</option>
+                    <option value="¿Ciudad donde naciste?">¿Ciudad donde naciste?</option>
+                    <option value="¿Nombre de tu escuela primaria?">¿Nombre de tu escuela primaria?</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Respuesta de Seguridad</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Escribe tu respuesta de seguridad"
+                    value={regRecoveryAnswer}
+                    onChange={(e) => setRegRecoveryAnswer(e.target.value)}
                     required
                   />
                 </div>
@@ -3090,11 +3276,21 @@ function App() {
                                   {p.is_admin && <span style={{ fontSize: '0.7rem', background: 'var(--accent-color)', color: '#000', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 'bold' }}>ADMIN</span>}
                                 </div>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                  WhatsApp: <strong>{p.whatsapp}</strong>
+                                  WhatsApp: <strong>{p.whatsapp}</strong> | PIN: 🔑 <strong>{p.pin}</strong>
                                 </div>
                                 {p.mystic_phrase && (
                                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
                                     Frase: <span style={{ fontStyle: 'italic' }}>"{p.mystic_phrase}"</span>
+                                  </div>
+                                )}
+                                {dbHasRecoveryColumns && p.recovery_log && Array.isArray(p.recovery_log) && p.recovery_log.length > 0 && (
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
+                                    <span style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>Historial de PIN revelado:</span>
+                                    <ul style={{ paddingLeft: '1rem', margin: '0.25rem 0', listStyleType: 'circle' }}>
+                                      {p.recovery_log.map((ts, idx) => (
+                                        <li key={idx}>{new Date(ts).toLocaleString()}</li>
+                                      ))}
+                                    </ul>
                                   </div>
                                 )}
                               </div>
@@ -3118,6 +3314,13 @@ function App() {
                                   style={{ width: 'auto', padding: '0.4rem 0.75rem', height: '36px', fontSize: '0.85rem' }}
                                 >
                                   Guardar Nombre
+                                </button>
+                                <button 
+                                  className="btn-secondary" 
+                                  onClick={() => handleResetParticipantPin(p.id, p.username)}
+                                  style={{ width: 'auto', padding: '0.4rem 0.75rem', height: '36px', fontSize: '0.85rem', borderColor: 'var(--primary-gold)', color: 'var(--primary-gold)', background: 'none' }}
+                                >
+                                  Restablecer PIN
                                 </button>
                                 {!p.is_admin && (
                                   <button 
@@ -3774,6 +3977,98 @@ function App() {
                 No, Cancelar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Recuperación de PIN */}
+      {showRecoveryModal && (
+        <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 3000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="glass-card onboarding-card" style={{ borderLeft: '4px solid var(--accent-color)', maxWidth: '450px', width: '90%', padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              🔑 Recuperar PIN
+            </h3>
+            
+            {recoveryError && (
+              <div style={{ color: '#ff4d4d', background: 'rgba(255, 77, 77, 0.1)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                ⚠️ {recoveryError}
+              </div>
+            )}
+
+            {recoveryStep === 1 && (
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Ingresa tu número de WhatsApp para iniciar la recuperación de tu PIN.
+                </p>
+                <div className="form-group">
+                  <label>WhatsApp (Últimos 8 números)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Ej. 34567823"
+                    value={recoveryWhatsapp}
+                    onChange={(e) => setRecoveryWhatsapp(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                  <button className="btn-primary" onClick={handleLookupWhatsapp} style={{ flex: 1 }}>
+                    Siguiente
+                  </button>
+                  <button className="btn-secondary" onClick={() => setShowRecoveryModal(false)} style={{ flex: 1 }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {recoveryStep === 2 && recoveryUser && (
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Responde a tu pregunta de seguridad para revelar el PIN.
+                </p>
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--accent-color)' }}>Pregunta:</label>
+                  <div style={{ fontSize: '1rem', color: 'var(--text-primary)', padding: '0.5rem 0', fontWeight: 'bold' }}>
+                    {recoveryUser.recovery_question}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Tu Respuesta</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Escribe la respuesta"
+                    value={recoveryAnswerInput}
+                    onChange={(e) => setRecoveryAnswerInput(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                  <button className="btn-primary" onClick={handleVerifyRecoveryAnswer} style={{ flex: 1 }}>
+                    Revelar PIN
+                  </button>
+                  <button className="btn-secondary" onClick={() => setRecoveryStep(1)} style={{ flex: 1 }}>
+                    Atrás
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {recoveryStep === 3 && (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Tu PIN de seguridad es:
+                </p>
+                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--accent-color)', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', letterSpacing: '0.5rem', marginBottom: '1.5rem' }}>
+                  {recoveredPin}
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic', marginBottom: '1.5rem' }}>
+                  ⚠️ Se ha registrado este evento de revelado en el log de tu cuenta.
+                </p>
+                <button className="btn-primary" onClick={() => setShowRecoveryModal(false)} style={{ width: '100%' }}>
+                  Entendido
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
