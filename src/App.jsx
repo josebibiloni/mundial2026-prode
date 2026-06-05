@@ -4055,14 +4055,32 @@ function App() {
 
             {recoveryStep === 3 && (
               <div style={{ textAlign: 'center' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                  Tu PIN de seguridad es:
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+                  ✓ Respuesta verificada con éxito.
                 </p>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--accent-color)', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', letterSpacing: '0.5rem', marginBottom: '1.5rem' }}>
-                  {recoveredPin}
+                <p style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+                  Por razones de seguridad, no podemos mostrar tu PIN aquí. Comunícate con un administrador del grupo para que restablezca tu PIN.
+                </p>
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.25rem', marginBottom: '0.5rem' }}>
+                    Administradores del grupo:
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {participants.filter(p => p.is_admin).map(adm => (
+                      <div key={adm.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                        <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>{adm.username}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>WhatsApp: {adm.whatsapp}</span>
+                      </div>
+                    ))}
+                    {participants.filter(p => p.is_admin).length === 0 && (
+                      <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                        No hay administradores registrados en este grupo.
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic', marginBottom: '1.5rem' }}>
-                  ⚠️ Se ha registrado este evento de revelado en el log de tu cuenta.
+                  ⚠️ Se ha registrado esta solicitud de verificación en el historial de tu cuenta.
                 </p>
                 <button className="btn-primary" onClick={() => setShowRecoveryModal(false)} style={{ width: '100%' }}>
                   Entendido
