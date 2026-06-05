@@ -167,6 +167,25 @@ function App() {
   // Login
   const [loginWhatsapp, setLoginWhatsapp] = useState(''); // Whatsapp (8 digitos)
   const [loginPin, setLoginPin] = useState(''); // PIN (4 digitos)
+  const [showRegisterForm, setShowRegisterForm] = useState(false);
+  const [loginBtnText, setLoginBtnText] = useState('Iniciar Sesión');
+
+  const BANTER_LOGIN_PHRASES = [
+    "Entra, Gil ⚽",
+    "Entrar a perder 📉",
+    "Ingresar (si te da el cuero) 😏",
+    "Hacer el ridículo 🤡",
+    "Entrar al fondo de la tabla 📉",
+    "Dar lástima un rato 🩴",
+    "Entra a ver cómo gano 🏆"
+  ];
+
+  useEffect(() => {
+    if (currentTenant) {
+      const idx = Math.floor(Math.random() * BANTER_LOGIN_PHRASES.length);
+      setLoginBtnText(BANTER_LOGIN_PHRASES[idx]);
+    }
+  }, [currentTenant]);
 
   // Carga inicial y listeners de DB
   useEffect(() => {
@@ -2329,7 +2348,7 @@ function App() {
               </div>
 
               {/* Login */}
-              <form onSubmit={handleLoginUser} style={{ marginBottom: '2rem' }}>
+              <form onSubmit={handleLoginUser} style={{ marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Entrar al Juego</h3>
                 <div className="form-group">
                   <label>Nro. de WhatsApp (Últimos 8 números)</label>
@@ -2355,7 +2374,9 @@ function App() {
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-                  <button type="submit" className="btn-secondary">Iniciar Sesión</button>
+                  <button type="submit" className="btn-primary" style={{ background: 'var(--accent-color)', color: '#000', fontWeight: 'bold' }}>
+                    {loginBtnText}
+                  </button>
                   <button
                     type="button"
                     onClick={handleOpenRecovery}
@@ -2369,102 +2390,122 @@ function App() {
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '1.5rem 0' }} />
 
               {/* Registro */}
-              <form onSubmit={handleRegisterUser}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Registrarse como Nuevo Miembro</h3>
-                <div className="form-group">
-                  <label>Nombre Real Completo</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ej. Juan Carlos Gómez"
-                    value={newUserFullName}
-                    onChange={(e) => setNewUserFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Apodo / Nickname público</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ej. Juani10"
-                    value={newUserName}
-                    onChange={(e) => setNewUserName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Frase Mística / Inspiradora</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ej. Nene, ¿vo' queré' morir en este instante?"
-                    value={newUserMystic}
-                    onChange={(e) => setNewUserMystic(e.target.value)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Nro. de WhatsApp (Últimos 8 números)</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ej. 34567823 (sin el 11!)"
-                    value={newUserWhatsapp}
-                    onChange={(e) => setNewUserWhatsapp(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>PIN de 4 dígitos</label>
-                  <input
-                    type="password"
-                    maxLength="4"
-                    className="form-control"
-                    placeholder="🔑 ****"
-                    value={newUserPin}
-                    onChange={(e) => setNewUserPin(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Pregunta de Seguridad (para recuperar PIN)</label>
-                  <select
-                    className="form-control"
-                    value={regRecoveryQuestion}
-                    onChange={(e) => setRegRecoveryQuestion(e.target.value)}
-                    required
-                  >
-                    <option value="¿En tu equipo glorioso, cuál es el número de tu camiseta?">¿En tu equipo glorioso, cuál es el número de tu camiseta?</option>
-                    <option value="¿Nombre de tu primera mascota?">¿Nombre de tu primera mascota?</option>
-                    <option value="¿Club de fútbol de tu infancia?">¿Club de fútbol de tu infancia?</option>
-                    <option value="¿Ciudad donde naciste?">¿Ciudad donde naciste?</option>
-                    <option value="¿Nombre de tu escuela primaria?">¿Nombre de tu escuela primaria?</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Respuesta de Seguridad</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Escribe tu respuesta de seguridad"
-                    value={regRecoveryAnswer}
-                    onChange={(e) => setRegRecoveryAnswer(e.target.value)}
-                    required
-                  />
-                </div>
-                {participants.length === 0 && (
-                  <div className="form-group" style={{ flexDirection: 'row', gap: '0.5rem', alignItems: 'center' }}>
-                    <input
-                      type="checkbox"
-                      id="adminCheck"
-                      checked={isAdminRegister}
-                      onChange={(e) => setIsAdminRegister(e.target.checked)}
-                    />
-                    <label htmlFor="adminCheck" style={{ textTransform: 'none', cursor: 'pointer' }}>Ser Administrador</label>
+              {!showRegisterForm ? (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowRegisterForm(true)}
+                  style={{ width: '100%', fontWeight: 'bold' }}
+                >
+                  👤 Registrar Nuevo Usuario
+                </button>
+              ) : (
+                <form onSubmit={handleRegisterUser}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Registrarse como Nuevo Miembro</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterForm(false)}
+                      style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '0.85rem' }}
+                    >
+                      [ Ocultar ]
+                    </button>
                   </div>
-                )}
-                <button type="submit" className="btn-primary">Registrarse y Jugar</button>
-              </form>
+                  <div className="form-group">
+                    <label>Nombre Real Completo</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Ej. Juan Carlos Gómez"
+                      value={newUserFullName}
+                      onChange={(e) => setNewUserFullName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Apodo / Nickname público</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Ej. Juani10"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Frase Mística / Inspiradora</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Ej. Nene, ¿vo' queré' morir en este instante?"
+                      value={newUserMystic}
+                      onChange={(e) => setNewUserMystic(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Nro. de WhatsApp (Últimos 8 números)</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Ej. 34567823 (sin el 11!)"
+                      value={newUserWhatsapp}
+                      onChange={(e) => setNewUserWhatsapp(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>PIN de 4 dígitos</label>
+                    <input
+                      type="password"
+                      maxLength="4"
+                      className="form-control"
+                      placeholder="🔑 ****"
+                      value={newUserPin}
+                      onChange={(e) => setNewUserPin(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Pregunta de Seguridad (para recuperar PIN)</label>
+                    <select
+                      className="form-control"
+                      value={regRecoveryQuestion}
+                      onChange={(e) => setRegRecoveryQuestion(e.target.value)}
+                      required
+                    >
+                      <option value="¿En tu equipo glorioso, cuál es el número de tu camiseta?">¿En tu equipo glorioso, cuál es el número de tu camiseta?</option>
+                      <option value="¿Nombre de tu primera mascota?">¿Nombre de tu primera mascota?</option>
+                      <option value="¿Club de fútbol de tu infancia?">¿Club de fútbol de tu infancia?</option>
+                      <option value="¿Ciudad donde naciste?">¿Ciudad donde naciste?</option>
+                      <option value="¿Nombre de tu escuela primaria?">¿Nombre de tu escuela primaria?</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Respuesta de Seguridad</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Escribe tu respuesta de seguridad"
+                      value={regRecoveryAnswer}
+                      onChange={(e) => setRegRecoveryAnswer(e.target.value)}
+                      required
+                    />
+                  </div>
+                  {participants.length === 0 && (
+                    <div className="form-group" style={{ flexDirection: 'row', gap: '0.5rem', alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        id="adminCheck"
+                        checked={isAdminRegister}
+                        onChange={(e) => setIsAdminRegister(e.target.checked)}
+                      />
+                      <label htmlFor="adminCheck" style={{ textTransform: 'none', cursor: 'pointer' }}>Ser Administrador</label>
+                    </div>
+                  )}
+                  <button type="submit" className="btn-primary" style={{ background: 'var(--accent-color)', color: '#000', fontWeight: 'bold' }}>Registrarse y Jugar</button>
+                </form>
+              )}
             </div>
           </div>
         )}
