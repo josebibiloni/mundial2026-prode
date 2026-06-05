@@ -2347,11 +2347,20 @@ function App() {
                     cursor: 'pointer'
                   }}
                 >
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id}>
-                      🏆 {t.name}
-                    </option>
-                  ))}
+                  {tenants.map(t => {
+                    let displayName = t.name.toUpperCase().trim();
+                    if (displayName.endsWith('2026') && !displayName.endsWith(' 2026')) {
+                      displayName = displayName.slice(0, -4) + ' 2026';
+                    }
+                    if (t.id === 'caseros2026' || displayName.includes('CASEROS')) {
+                      displayName = displayName + ' ⚽❤️';
+                    }
+                    return (
+                      <option key={t.id} value={t.id}>
+                        🏆 {displayName}
+                      </option>
+                    );
+                  })}
                 </select>
 
                 <button
