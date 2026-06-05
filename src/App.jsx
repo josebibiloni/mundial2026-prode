@@ -1193,6 +1193,70 @@ function App() {
     }
   };
 
+  // Actualizar participante por el Admin
+  const handleUpdateParticipantAdmin = async (participantId, newFullName) => {
+    if (!currentUser?.isAdmin) return;
+    if (!newFullName.trim()) {
+      alert("El nombre completo no puede estar vacío.");
+      return;
+    }
+    if (isSupabaseConnected && supabase) {
+      try {
+        const { error } = await supabase
+          .from('participants')
+          .update({ full_name: newFullName })
+          .eq('id', participantId);
+        if (error) throw error;
+        alert('Nombre del participante actualizado con éxito.');
+        await loadParticipantsForTenant(currentTenant.id);
+      } catch (err) {
+        alert('Error al actualizar participante: ' + err.message);
+      }
+    } else {
+      setParticipants(prev => prev.map(p => p.id === participantId ? { ...p, full_name: newFullName } : p));
+      alert('Nombre del participante actualizado localmente.');
+    }
+  };
+
+  // Eliminar participante por el Admin
+  const handleDeleteParticipantAdmin = async (participantId, username) => {
+    if (!currentUser?.isAdmin) return;
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar a "${username}"? Se borrarán permanentemente todos sus pronósticos y duelos.`)) {
+      return;
+    }
+    if (isSupabaseConnected && supabase) {
+      try {
+        // Borrar chicanas creadas por el usuario
+        await supabase.from('boludeo_events').delete().eq('triggered_by_username', username);
+        // Borrar duelos del usuario
+        await supabase.from('mini_duels').delete().eq('challenger_username', username);
+        await supabase.from('mini_duels').delete().eq('opponent_username', username);
+        // Borrar predicciones del usuario
+        await supabase.from('predictions').delete().eq('participant_id', participantId);
+        await supabase.from('predictions').delete().eq('participant_username', username);
+        // Borrar participante
+        const { error } = await supabase
+          .from('participants')
+          .delete()
+          .eq('id', participantId);
+        if (error) throw error;
+        alert('Participante eliminado con éxito.');
+        await loadParticipantsForTenant(currentTenant.id);
+      } catch (err) {
+        alert('Error al eliminar participante: ' + err.message);
+      }
+    } else {
+      setParticipants(prev => prev.filter(p => p.id !== participantId));
+      setPredictions(prev => {
+        const next = { ...prev };
+        delete next[`${currentTenant.id}_${participantId}`];
+        delete next[`${currentTenant.id}_${username}`];
+        return next;
+      });
+      alert('Participante eliminado localmente.');
+    }
+  };
+
   // Guardar puntuación de partido de forma manual por el Admin
   const handleSaveMatchScoreManual = async (matchId, scoreA, scoreB, status) => {
     if (!currentUser?.isAdmin) {
@@ -2557,6 +2621,70 @@ function App() {
                       </div>
 
                     </div>
+
+                    {/* Panel de Gestión de Participantes */}
+                    <div style={{ marginTop: '3rem', borderTop: '2px solid var(--glass-border)', paddingTop: '2rem' }}>
+                      <h3 style={{ fontSize: '1.3rem', color: 'var(--accent-color)', marginBottom: '1.5rem', fontWeight: 'bold' }}>
+                        👥 Panel de Gestión de Participantes
+                      </h3>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {participants.length === 0 ? (
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No hay participantes en este grupo.</p>
+                        ) : (
+                          participants.map(p => (
+                            <div key={p.id} className="glass-card" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderColor: p.is_admin ? 'var(--accent-color)' : 'var(--glass-border)' }}>
+                              <div style={{ flex: '1 1 200px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{p.username}</strong>
+                                  {p.is_admin && <span style={{ fontSize: '0.7rem', background: 'var(--accent-color)', color: '#000', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 'bold' }}>ADMIN</span>}
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                  WhatsApp: <strong>{p.whatsapp}</strong>
+                                </div>
+                                {p.mystic_phrase && (
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                    Frase: <span style={{ fontStyle: 'italic' }}>"{p.mystic_phrase}"</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', flex: '2 1 300px' }}>
+                                <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '150px' }}>
+                                  <input 
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Nombre Completo"
+                                    defaultValue={p.full_name || p.fullName || ''}
+                                    id={`fullname-edit-${p.id}`}
+                                    style={{ height: '36px', fontSize: '0.9rem', background: 'var(--form-bg)', color: 'var(--input-color)', border: '1px solid var(--glass-border)' }}
+                                  />
+                                </div>
+                                <button 
+                                  className="btn-primary" 
+                                  onClick={() => {
+                                    const newVal = document.getElementById(`fullname-edit-${p.id}`).value;
+                                    handleUpdateParticipantAdmin(p.id, newVal);
+                                  }}
+                                  style={{ width: 'auto', padding: '0.4rem 0.75rem', height: '36px', fontSize: '0.85rem' }}
+                                >
+                                  Guardar Nombre
+                                </button>
+                                {!p.is_admin && (
+                                  <button 
+                                    className="btn-secondary" 
+                                    onClick={() => handleDeleteParticipantAdmin(p.id, p.username)}
+                                    style={{ width: 'auto', padding: '0.4rem 0.75rem', height: '36px', fontSize: '0.85rem', borderColor: '#ff4d4d', color: '#ff4d4d', background: 'none' }}
+                                  >
+                                    Eliminar 🗑️
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
                   </div>
                 )}
               </div>
