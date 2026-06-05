@@ -73,6 +73,25 @@ function App() {
   const [activeLosingDuelId, setActiveLosingDuelId] = useState(null);
   const [loserResponseText, setLoserResponseText] = useState('');
   const [showLoserResponseModal, setShowLoserResponseModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Restaurar sesión guardada de localStorage al iniciar la app
+  useEffect(() => {
+    const storedTenant = localStorage.getItem('caseros_prode_tenant');
+    const storedUser = localStorage.getItem('caseros_prode_user');
+    if (storedTenant) {
+      try {
+        const parsedTenant = JSON.parse(storedTenant);
+        setCurrentTenant(parsedTenant);
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setCurrentUser(parsedUser);
+        }
+      } catch (e) {
+        console.error("Error restaurando sesión de localStorage:", e);
+      }
+    }
+  }, []);
 
   // Configuración de Boludeo Personalizado
   const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
@@ -925,6 +944,8 @@ function App() {
           setSetupPhrase(registeredUser.mystic_phrase || '');
 
           setCurrentUser(loggedUser);
+          localStorage.setItem('caseros_prode_user', JSON.stringify(loggedUser));
+          localStorage.setItem('caseros_prode_tenant', JSON.stringify(currentTenant));
           await loadParticipantsForTenant(currentTenant.id);
           await loadDuelsForTenant(currentTenant.id);
           
@@ -975,6 +996,8 @@ function App() {
     setSetupPhrase(found.mystic_phrase || '');
 
     setCurrentUser(loggedUser);
+    localStorage.setItem('caseros_prode_user', JSON.stringify(loggedUser));
+    localStorage.setItem('caseros_prode_tenant', JSON.stringify(currentTenant));
     await loadDuelsForTenant(currentTenant.id);
     
     // Disparar popup de bienvenida ácida en Login
@@ -1002,7 +1025,8 @@ function App() {
           username: editNickInput,
           mystic_phrase: editMysticInput,
           stripe_color_1: editColor1Input,
-          stripe_color_2: editColor2Input
+          stripe_color_2: editColor2Input,
+          pattern: editPatternInput
         };
 
         const { error } = await supabase.from('participants')
@@ -1011,14 +1035,16 @@ function App() {
 
         if (error) throw error;
 
-        setCurrentUser({
+        const updatedUser = {
           ...currentUser,
           username: editNickInput,
           mysticPhrase: editMysticInput,
           stripeColor1: editColor1Input,
-          stripeColor2: editColor2Input
-        });
-        
+          stripeColor2: editColor2Input,
+          pattern: editPatternInput
+        };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('caseros_prode_user', JSON.stringify(updatedUser));
         setIsEditingProfile(false);
         await loadParticipantsForTenant(currentTenant.id);
         alert('Perfil actualizado con éxito.');
@@ -3022,15 +3048,11 @@ function App() {
               </button>
             </nav>
 
-            {/* Cerrar Sesión y salir */}
             <div style={{ marginTop: '2rem', textAlign: 'center' }}>
               <button
                 className="btn-secondary"
                 style={{ width: 'auto', color: '#ff4d4d', borderColor: '#ff4d4d' }}
-                onClick={() => {
-                  setCurrentUser(null);
-                  setCurrentTenant(null);
-                }}
+                onClick={() => setShowLogoutConfirm(true)}
               >
                 Cerrar Sesión y Cambiar de Grupo
               </button>
@@ -3038,6 +3060,41 @@ function App() {
 
           </div>
         )}
+
+      {/* Modal de confirmación de salida */}
+      {showLogoutConfirm && (
+        <div className="onboarding-wrapper" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 3000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="glass-card onboarding-card text-center" style={{ borderLeft: '4px solid #ff4d4d', maxWidth: '400px', width: '90%', padding: '2rem' }}>
+            <span style={{ fontSize: '3rem' }}>🚪</span>
+            <h3 style={{ fontSize: '1.5rem', marginTop: '1rem', color: 'var(--text-primary)' }}>¿Deseas Salir?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '1rem 0' }}>
+              ¿Estás seguro de que deseas cerrar sesión y cambiar de grupo?
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  setCurrentUser(null);
+                  setCurrentTenant(null);
+                  localStorage.removeItem('caseros_prode_user');
+                  localStorage.removeItem('caseros_prode_tenant');
+                  setShowLogoutConfirm(false);
+                }}
+                style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #ff4d4d, #f1a80a)', fontWeight: 'bold' }}
+              >
+                Sí, Salir
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{ flex: 1, padding: '0.75rem', fontWeight: 'bold' }}
+              >
+                No, Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </main>
     </div>
