@@ -1922,10 +1922,10 @@ function App() {
                     )}
 
                     <div className="match-body" style={{ flexDirection: 'column', gap: '1.5rem' }}>
-                      <div className="d-flex" style={{ width: '100%', justifyContent: 'space-around', alignItems: 'center' }}>
+                      <div className="d-flex prediction-card-body" style={{ width: '100%', justifyContent: 'space-around', alignItems: 'center' }}>
                         
                         {/* Team A */}
-                        <div className="team-container" style={{ flex: 1 }}>
+                        <div className="team-container" style={{ flex: 1, minWidth: 0 }}>
                           <span className="team-flag" style={{ fontSize: '3.5rem' }}>{currentMatch.flagA}</span>
                           <span className="team-name" style={{ fontSize: '1.2rem', marginTop: '0.5rem' }}>{currentMatch.teamA}</span>
                         </div>
@@ -1954,7 +1954,7 @@ function App() {
                         </div>
 
                         {/* Team B */}
-                        <div className="team-container" style={{ flex: 1 }}>
+                        <div className="team-container" style={{ flex: 1, minWidth: 0 }}>
                           <span className="team-flag" style={{ fontSize: '3.5rem' }}>{currentMatch.flagB}</span>
                           <span className="team-name" style={{ fontSize: '1.2rem', marginTop: '0.5rem' }}>{currentMatch.teamB}</span>
                         </div>
