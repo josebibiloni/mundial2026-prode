@@ -1075,6 +1075,33 @@ function App() {
 
         if (error) throw error;
 
+        // Si cambiamos el apodo (username), también debemos migrar las predicciones y duelos en la BD
+        if (editNickInput !== currentUser.username) {
+          try {
+            await supabase.from('predictions')
+              .update({ participant_username: editNickInput })
+              .eq('participant_username', currentUser.username)
+              .eq('tenant_id', currentTenant.id);
+
+            await supabase.from('mini_duels')
+              .update({ challenger_username: editNickInput })
+              .eq('challenger_username', currentUser.username)
+              .eq('tenant_id', currentTenant.id);
+
+            await supabase.from('mini_duels')
+              .update({ opponent_username: editNickInput })
+              .eq('opponent_username', currentUser.username)
+              .eq('tenant_id', currentTenant.id);
+
+            await supabase.from('mini_duels')
+              .update({ winner_username: editNickInput })
+              .eq('winner_username', currentUser.username)
+              .eq('tenant_id', currentTenant.id);
+          } catch (migErr) {
+            console.error("Error al migrar apodo en cascada:", migErr);
+          }
+        }
+
         const updatedUser = {
           ...currentUser,
           username: editNickInput,
