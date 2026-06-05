@@ -108,10 +108,7 @@ function App() {
   useEffect(() => {
     if (currentUser && currentTenant && matches.length > 0 && !hasRedirected) {
       const userPreds = predictions[`${currentTenant.id}_${currentUser.id}`] || predictions[`${currentTenant.id}_${(currentUser.username || '').trim()}`] || {};
-      const firstUnpredictedIdx = matches.findIndex(m => {
-        const pred = userPreds[m.id];
-        return !pred || pred.scoreA === '' || pred.scoreA === null || pred.scoreB === '' || pred.scoreB === null;
-      });
+      const firstUnpredictedIdx = getFirstIncompleteMatchIndex(userPreds);
 
       if (firstUnpredictedIdx !== -1) {
         setActiveTab('predictions');
@@ -209,6 +206,33 @@ function App() {
       } catch (e) {
         setDbHasRecoveryColumns(false);
       }
+    }
+  };
+
+  const getFirstIncompleteMatchIndex = (userPreds) => {
+    const isPhase1Closed = new Date() >= new Date('2026-06-10T23:59:00');
+    const isPhase2Closed = new Date() >= new Date('2026-06-28T00:00:00');
+    
+    if (isPhase2Closed) {
+      return -1;
+    }
+    
+    if (!isPhase1Closed) {
+      // Solo consideramos los partidos de la Fase 1
+      return matches.findIndex(m => {
+        const stage = m.stage || (m.id >= 73 ? 2 : 1);
+        if (stage !== 1) return false;
+        const pred = userPreds[m.id];
+        return !pred || pred.scoreA === '' || pred.scoreA === null || pred.scoreB === '' || pred.scoreB === null;
+      });
+    } else {
+      // Fase 1 cerrada, consideramos partidos de la Fase 2 (Fase Final)
+      return matches.findIndex(m => {
+        const stage = m.stage || (m.id >= 73 ? 2 : 1);
+        if (stage !== 2) return false;
+        const pred = userPreds[m.id];
+        return !pred || pred.scoreA === '' || pred.scoreA === null || pred.scoreB === '' || pred.scoreB === null;
+      });
     }
   };
 
@@ -3972,10 +3996,7 @@ function App() {
               <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => {
                 setActiveTab('predictions');
                 const userPreds = predictions[`${currentTenant.id}_${currentUser.id}`] || predictions[`${currentTenant.id}_${(currentUser.username || '').trim()}`] || {};
-                const firstUnpredictedIdx = matches.findIndex(m => {
-                  const pred = userPreds[m.id];
-                  return !pred || pred.scoreA === '' || pred.scoreA === null || pred.scoreB === '' || pred.scoreB === null;
-                });
+                const firstUnpredictedIdx = getFirstIncompleteMatchIndex(userPreds);
                 if (firstUnpredictedIdx !== -1) {
                   setCurrentMatchIndex(firstUnpredictedIdx);
                 }
