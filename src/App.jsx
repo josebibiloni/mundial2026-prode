@@ -1761,7 +1761,7 @@ function App() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Ej. 11223344"
+                    placeholder="Ej. 34567823 (sin el 11!)"
                     value={loginWhatsapp}
                     onChange={(e) => setLoginWhatsapp(e.target.value)}
                     required
@@ -1814,7 +1814,7 @@ function App() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Ej. ¡Elijo creer!"
+                    placeholder="Nene, ¿vo' queré' morir en este instante?"
                     value={newUserMystic}
                     onChange={(e) => setNewUserMystic(e.target.value)}
                   />
@@ -1824,7 +1824,7 @@ function App() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Ej. 11223344"
+                    placeholder="Ej. 34567823 (sin el 11!)"
                     value={newUserWhatsapp}
                     onChange={(e) => setNewUserWhatsapp(e.target.value)}
                     required
