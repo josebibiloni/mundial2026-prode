@@ -23,16 +23,96 @@ const welcomeBanterPhrases = [
 
 function App() {
   const isSupabaseConnected = true;
-  const isPredictionsClosed = new Date() >= new Date('2026-06-10T23:59:00');
+
+  // Sincronización horaria del servidor
+  const [serverTimeOnLoad, setServerTimeOnLoad] = useState(null);
+  const [performanceTimeOnLoad, setPerformanceTimeOnLoad] = useState(null);
+
+  const getSecureDate = () => {
+    if (serverTimeOnLoad !== null && performanceTimeOnLoad !== null) {
+      const elapsed = performance.now() - performanceTimeOnLoad;
+      return new Date(serverTimeOnLoad + elapsed);
+    }
+    return new Date();
+  };
+
+  const parseMatchDate = (dateStr) => {
+    // Ej: "11 Jun 2026 - 15:00" o "15 Jun 2026 - 22:00"
+    if (!dateStr) return null;
+    const parts = dateStr.split(' - ');
+    if (parts.length < 2) return null;
+    
+    const datePart = parts[0];
+    const timePart = parts[1];
+    
+    const dateTokens = datePart.split(' ');
+    if (dateTokens.length < 3) return null;
+    
+    const day = parseInt(dateTokens[0]);
+    const monthStr = dateTokens[1];
+    const year = parseInt(dateTokens[2]);
+    
+    const timeTokens = timePart.split(':');
+    if (timeTokens.length < 2) return null;
+    
+    const hours = parseInt(timeTokens[0]);
+    const minutes = parseInt(timeTokens[1]);
+    
+    const months = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    };
+    
+    const month = months[monthStr] !== undefined ? months[monthStr] : 5;
+    
+    return new Date(year, month, day, hours, minutes);
+  };
 
   const isMatchPredictionsClosed = (match) => {
     if (!match) return true;
-    const matchStage = match.stage || (match.id >= 73 ? 2 : 1);
-    if (matchStage === 2) {
-      return new Date() >= new Date('2026-06-28T00:00:00');
-    }
-    return new Date() >= new Date('2026-06-10T23:59:00');
+    if (match.status === 'played') return true;
+
+    const parsedDate = parseMatchDate(match.date || match.match_date);
+    if (!parsedDate) return true;
+
+    // Plazo de cierre: 23:59:59 del día anterior al partido
+    const dayBefore = new Date(parsedDate);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    dayBefore.setHours(23, 59, 59, 999);
+
+    return getSecureDate() >= dayBefore;
   };
+
+  const syncServerTime = async () => {
+    try {
+      const start = performance.now();
+      const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { signal: AbortSignal.timeout(4000) });
+      const data = await res.json();
+      const serverUtc = new Date(data.utc_datetime).getTime();
+      const latency = (performance.now() - start) / 2;
+      setServerTimeOnLoad(serverUtc + latency);
+      setPerformanceTimeOnLoad(performance.now());
+      console.log("Sincronización horaria exitosa:", new Date(serverUtc + latency).toISOString());
+    } catch (e) {
+      console.warn("Fallo worldtimeapi.org, reintentando con timeapi.io...", e);
+      try {
+        const start = performance.now();
+        const res = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC', { signal: AbortSignal.timeout(4000) });
+        const data = await res.json();
+        const serverUtc = new Date(data.dateTime).getTime();
+        const latency = (performance.now() - start) / 2;
+        setServerTimeOnLoad(serverUtc + latency);
+        setPerformanceTimeOnLoad(performance.now());
+        console.log("Sincronización horaria exitosa (fallback):", new Date(serverUtc + latency).toISOString());
+      } catch (e2) {
+        console.error("Fallo total de sincronización horaria:", e2);
+        // Fallback al reloj local si todo falla
+        setServerTimeOnLoad(Date.now());
+        setPerformanceTimeOnLoad(performance.now());
+      }
+    }
+  };
+
 
   // Sesión y Navegación
   const [currentTenant, setCurrentTenant] = useState(null); // { id, name }
@@ -187,6 +267,7 @@ function App() {
 
   // Carga inicial y listeners de DB
   useEffect(() => {
+    syncServerTime();
     fetchInitialData();
     checkRecoveryColumns();
   }, []);
@@ -1305,13 +1386,8 @@ function App() {
 
     // Validación de fecha límite dinámica
     const targetMatch = matches.find(m => m.id === matchId);
-    const matchStage = targetMatch?.stage || (matchId >= 73 ? 2 : 1);
-    const closingTime = matchStage === 2 ? new Date('2026-06-28T00:00:00') : new Date('2026-06-10T23:59:00');
-    if (new Date() >= closingTime) {
-      alert(matchStage === 2 
-        ? 'La carga y modificación de pronósticos de Fase 2 finalizó el 28 de Junio de 2026 a las 00:00.'
-        : 'La carga y modificación de pronósticos finalizó el 10 de Junio de 2026 a las 23:59 (día previo al inicio del mundial).'
-      );
+    if (isMatchPredictionsClosed(targetMatch)) {
+      alert('La carga y modificación de pronósticos para este partido finalizó el día anterior a su juego.');
       return;
     }
 
