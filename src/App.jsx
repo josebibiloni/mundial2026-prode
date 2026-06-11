@@ -2923,7 +2923,7 @@ function App() {
                       <tr>
                         <th>Pos</th>
                         <th>Apodo (Nickname)</th>
-                        <th style={{ textAlign: 'center' }}>Marcadores Exactos</th>
+                        <th style={{ textAlign: 'center' }}>Puntos Marcador Exacto</th>
                         <th style={{ textAlign: 'right' }}>Puntos Totales</th>
                       </tr>
                     </thead>
@@ -2940,7 +2940,7 @@ function App() {
                               {row.username}
                             </span>
                           </td>
-                          <td style={{ textAlign: 'center' }}>{row.exactScores} ⭐</td>
+                          <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
                           <td className="points-cell">{row.points} pts</td>
                         </tr>
                       ))}
@@ -2962,7 +2962,7 @@ function App() {
                       <tr>
                         <th>Pos</th>
                         <th>Apodo (Nickname)</th>
-                        <th style={{ textAlign: 'center' }}>Marcadores Exactos</th>
+                        <th style={{ textAlign: 'center' }}>Puntos Marcador Exacto</th>
                         <th style={{ textAlign: 'right' }}>Puntos Totales</th>
                       </tr>
                     </thead>
@@ -2979,7 +2979,7 @@ function App() {
                               {row.username}
                             </span>
                           </td>
-                          <td style={{ textAlign: 'center' }}>{row.exactScores} ⭐</td>
+                          <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
                           <td className="points-cell" style={{ color: 'gold', fontWeight: 'bold' }}>{row.points} pts</td>
                         </tr>
                       ))}
