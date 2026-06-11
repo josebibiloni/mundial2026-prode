@@ -70,7 +70,7 @@ function App() {
 
   const isMatchPredictionsClosed = (match) => {
     if (!match) return true;
-    if (match.status === 'played') return true;
+    if (match.status === 'played' || match.status === 'live') return true;
 
     const parsedDate = parseMatchDate(match.date || match.match_date);
     if (!parsedDate) return true;
@@ -983,7 +983,7 @@ function App() {
 
   // Reglas de puntuación
   const calculatePoints = (pred, actual) => {
-    if (actual.status !== 'played' || actual.actualScoreA === null || actual.actualScoreB === null || actual.actualScoreA === undefined || actual.actualScoreB === undefined) {
+    if ((actual.status !== 'played' && actual.status !== 'live') || actual.actualScoreA === null || actual.actualScoreB === null || actual.actualScoreA === undefined || actual.actualScoreB === undefined) {
       return 0;
     }
     if (!pred || pred.scoreA === null || pred.scoreB === null || pred.scoreA === undefined || pred.scoreB === undefined || pred.scoreA === '' || pred.scoreB === '') {
@@ -1028,7 +1028,7 @@ function App() {
 
       matches.forEach(match => {
         const matchStage = match.stage || (match.id >= 73 ? 2 : 1);
-        if (matchStage === stageNum && match.status === 'played') {
+        if (matchStage === stageNum && (match.status === 'played' || match.status === 'live')) {
           const pred = userPreds[match.id];
           const pts = calculatePoints(pred, match);
           totalPoints += pts;
@@ -1098,7 +1098,7 @@ function App() {
   const leaderboardDuels = getLeaderboardDuels();
 
   // Determinar la tabla de posiciones activa para los castigos visuales (Fase 2 si ya empezó, sino Fase 1)
-  const hasPhase2MatchesPlayed = matches.some(m => (m.stage === 2 || m.id >= 73) && m.status === 'played');
+  const hasPhase2MatchesPlayed = matches.some(m => (m.stage === 2 || m.id >= 73) && (m.status === 'played' || m.status === 'live'));
   const leaderboard = hasPhase2MatchesPlayed ? leaderboardPhase2 : leaderboardPhase1;
 
   // Buscar si el usuario actual sufre el castigo (mitad inferior)
@@ -2771,13 +2771,13 @@ function App() {
 
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{currentMatch.stadium}</p>
 
-                    {currentMatch.status === 'played' && (
-                      <div style={{ color: '#ff4d4d', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem', background: 'rgba(255, 77, 77, 0.1)', padding: '0.5rem', borderRadius: '4px' }}>
-                        🔒 Partido finalizado. Pronósticos cerrados.
+                    {(currentMatch.status === 'played' || currentMatch.status === 'live') && (
+                      <div style={{ color: currentMatch.status === 'played' ? '#ff4d4d' : '#00ff87', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem', background: currentMatch.status === 'played' ? 'rgba(255, 77, 77, 0.1)' : 'rgba(0, 255, 135, 0.1)', padding: '0.5rem', borderRadius: '4px' }}>
+                        {currentMatch.status === 'played' ? '🔒 Partido finalizado. Pronósticos cerrados.' : '⚡ Partido en vivo. Pronósticos cerrados.'}
                       </div>
                     )}
 
-                    {currentMatch.status !== 'played' && isMatchPredictionsClosed(currentMatch) && (
+                    {currentMatch.status !== 'played' && currentMatch.status !== 'live' && isMatchPredictionsClosed(currentMatch) && (
                       <div style={{ color: '#ffb703', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem', background: 'rgba(255, 183, 3, 0.1)', padding: '0.5rem', borderRadius: '4px' }}>
                         🔒 Pronósticos cerrados por fecha límite ({(currentMatch.stage === 2 || currentMatch.id >= 73) ? '28 de Junio 00:00' : '10 de Junio 23:59'}).
                       </div>
@@ -2801,7 +2801,7 @@ function App() {
                              style={{ width: '70px', height: '70px', fontSize: '2rem' }}
                              value={currentUserPrediction?.scoreA ?? ''}
                              onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreA', e.target.value)}
-                             disabled={currentMatch.status === 'played' || isMatchPredictionsClosed(currentMatch)}
+                             disabled={currentMatch.status === 'played' || currentMatch.status === 'live' || isMatchPredictionsClosed(currentMatch)}
                            />
                            <span className="score-separator" style={{ fontSize: '2rem' }}>-</span>
                            <input
@@ -2811,7 +2811,7 @@ function App() {
                              style={{ width: '70px', height: '70px', fontSize: '2rem' }}
                              value={currentUserPrediction?.scoreB ?? ''}
                              onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreB', e.target.value)}
-                             disabled={currentMatch.status === 'played' || isMatchPredictionsClosed(currentMatch)}
+                             disabled={currentMatch.status === 'played' || currentMatch.status === 'live' || isMatchPredictionsClosed(currentMatch)}
                            />
                         </div>
 
@@ -2825,7 +2825,7 @@ function App() {
                     </div>
 
                     <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', width: '100%' }}>
-                      {currentMatch.status === 'played' ? (
+                      {(currentMatch.status === 'played' || currentMatch.status === 'live') ? (
                         (() => {
                           const pts = calculatePoints(currentUserPrediction, currentMatch);
                           let badgeBg = 'rgba(255, 77, 77, 0.15)';
@@ -2871,7 +2871,9 @@ function App() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resultado Oficial:</span>
+                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                    {currentMatch.status === 'live' ? 'Resultado en Vivo:' : 'Resultado Oficial:'}
+                                  </span>
                                   <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                                     {currentMatch.actualScoreA} - {currentMatch.actualScoreB}
                                   </div>
@@ -3037,7 +3039,7 @@ function App() {
 
                 {/* Sección de Desglose de Puntos por Partido Jugado */}
                 {(() => {
-                  const playedMatches = matches.filter(m => m.status === 'played');
+                  const playedMatches = matches.filter(m => m.status === 'played' || m.status === 'live');
                   if (playedMatches.length === 0) {
                     return (
                       <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
@@ -3092,7 +3094,9 @@ function App() {
 
                       {/* Tarjeta de Marcador Oficial */}
                       <div className="glass-card text-center animate-fade-in" style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', marginBottom: '1.5rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{selectedMatch.group} • Marcador Oficial</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                          {selectedMatch.group} • {selectedMatch.status === 'live' ? 'Marcador en Vivo' : 'Marcador Oficial'}
+                        </div>
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', marginTop: '0.5rem' }}>
                           <span style={{ fontSize: '1.1rem' }}>{selectedMatch.flagA} <strong>{selectedMatch.teamA}</strong></span>
                           <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent-color)', padding: '0.2rem 0.5rem', background: 'rgba(0, 255, 135, 0.05)', borderRadius: '6px', whiteSpace: 'nowrap' }}>
@@ -3189,8 +3193,8 @@ function App() {
                         const friendKeyId = `${currentTenant.id}_${selectedFriendId}`;
                         const friendKeyUsername = friend ? `${currentTenant.id}_${(friend.username || '').trim()}` : '';
                         const pred = predictions[friendKeyId]?.[m.id] || predictions[friendKeyUsername]?.[m.id];
-                        const isPlayed = m.status === 'played';
-                        const pts = isPlayed ? calculatePoints(pred, m) : 0;
+                        const isPlayed = m.status === 'played' || m.status === 'live';
+                         const pts = isPlayed ? calculatePoints(pred, m) : 0;
 
                         return (
                           <div key={m.id} className="glass-card" style={{ padding: '1rem' }}>
