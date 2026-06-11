@@ -272,6 +272,17 @@ function App() {
     checkRecoveryColumns();
   }, []);
 
+  // Sincronización automática de resultados en vivo cada 5 minutos
+  useEffect(() => {
+    if (matches.length > 0) {
+      syncLiveScores();
+      const interval = setInterval(() => {
+        syncLiveScores();
+      }, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [matches.length]);
+
   const checkRecoveryColumns = async () => {
     if (isSupabaseConnected && supabase) {
       try {
@@ -1859,53 +1870,81 @@ function App() {
     } : m));
   };
 
-  // Sincronizar marcadores reales
-  const handleSyncScores = async () => {
+  // Sincronizar marcadores reales de manera automática y en segundo plano
+  const syncLiveScores = async (isManual = false) => {
     try {
-      const res = await fetch('/api-results.json');
-      if (!res.ok) throw new Error('No se pudo descargar el feed de resultados.');
+      const res = await fetch('https://worldcup26.ir/get/games');
+      if (!res.ok) throw new Error('No se pudo conectar a la API de resultados.');
       const data = await res.json();
+      if (!data || !data.games) throw new Error('Formato de respuesta de API inválido.');
 
-      const updatedMatches = matches.map(match => {
-        const liveResult = data.find(r => r.id === match.id);
-        if (liveResult) {
-          return {
-            ...match,
-            actualScoreA: liveResult.actualScoreA,
-            actualScoreB: liveResult.actualScoreB,
-            status: liveResult.status,
-            teamA: liveResult.teamA !== undefined ? liveResult.teamA : match.teamA,
-            flagA: liveResult.flagA !== undefined ? liveResult.flagA : match.flagA,
-            teamB: liveResult.teamB !== undefined ? liveResult.teamB : match.teamB,
-            flagB: liveResult.flagB !== undefined ? liveResult.flagB : match.flagB
-          };
-        }
-        return match;
-      });
-
+      // Cargar la última foto de partidos desde Supabase para comparar con datos frescos
+      let dbMatches = [];
       if (isSupabaseConnected && supabase) {
-        for (const item of data) {
-          const updatePayload = {
-            actual_score_a: item.actualScoreA,
-            actual_score_b: item.actualScoreB,
-            status: item.status
-          };
-          if (item.teamA !== undefined) updatePayload.team_a = item.teamA;
-          if (item.flagA !== undefined) updatePayload.flag_a = item.flagA;
-          if (item.teamB !== undefined) updatePayload.team_b = item.teamB;
-          if (item.flagB !== undefined) updatePayload.flag_b = item.flagB;
-
-          await supabase.from('matches')
-            .update(updatePayload)
-            .eq('id', item.id);
+        const { data: latestDbMatches } = await supabase.from('matches').select('*').order('id', { ascending: true });
+        if (latestDbMatches && latestDbMatches.length > 0) {
+          dbMatches = latestDbMatches;
         }
       }
+      if (dbMatches.length === 0) {
+        // Fallback a los partidos cargados en memoria
+        dbMatches = matches.map(m => ({
+          id: m.id,
+          actual_score_a: m.actualScoreA,
+          actual_score_b: m.actualScoreB,
+          status: m.status
+        }));
+      }
 
-      setMatches(updatedMatches);
-      alert('¡Resultados sincronizados de forma automática con éxito!');
+      let hasChanges = false;
+      const dbUpdates = [];
+
+      data.games.forEach(apiGame => {
+        const matchId = parseInt(apiGame.id);
+        const dbMatch = dbMatches.find(m => m.id === matchId);
+        if (dbMatch) {
+          const apiScoreA = apiGame.home_score !== null && apiGame.home_score !== 'null' && apiGame.home_score !== undefined ? parseInt(apiGame.home_score) : null;
+          const apiScoreB = apiGame.away_score !== null && apiGame.away_score !== 'null' && apiGame.away_score !== undefined ? parseInt(apiGame.away_score) : null;
+          const apiStatus = apiGame.finished === "TRUE" ? "played" : (apiGame.time_elapsed !== "notstarted" ? "live" : "scheduled");
+
+          if (dbMatch.actual_score_a !== apiScoreA || dbMatch.actual_score_b !== apiScoreB || dbMatch.status !== apiStatus) {
+            hasChanges = true;
+            dbUpdates.push({
+              id: matchId,
+              actual_score_a: apiScoreA,
+              actual_score_b: apiScoreB,
+              status: apiStatus
+            });
+          }
+        }
+      });
+
+      if (hasChanges && isSupabaseConnected && supabase) {
+        for (const update of dbUpdates) {
+          await supabase.from('matches').update({
+            actual_score_a: update.actual_score_a,
+            actual_score_b: update.actual_score_b,
+            status: update.status
+          }).eq('id', update.id);
+        }
+        
+        // Refrescar UI cargando los datos frescos
+        fetchInitialData();
+      }
+
+      if (isManual) {
+        alert('¡Resultados sincronizados de forma automática con éxito!');
+      }
     } catch (err) {
-      alert('Error en la sincronización: ' + err.message);
+      console.warn("Fallo la sincronización en segundo plano:", err);
+      if (isManual) {
+        alert('Error en la sincronización: ' + err.message);
+      }
     }
+  };
+
+  const handleSyncScores = async () => {
+    await syncLiveScores(true);
   };
 
   // Filtrado y paginación de partidos
@@ -3217,7 +3256,7 @@ function App() {
                 <div className="glass-card mb-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)' }}>
                   <div>
                     <h4 style={{ marginBottom: '0.25rem' }}>Sincronización Automática</h4>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fuente: /api-results.json</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fuente: API worldcup26.ir</span>
                   </div>
                   <button className="btn-primary" style={{ width: 'auto' }} onClick={handleSyncScores}>
                     🔄 Sincronizar Resultados
