@@ -2967,9 +2967,9 @@ function App() {
                     <thead>
                       <tr>
                         <th>Pos</th>
-                        <th>Apodo (Nickname)</th>
-                        <th style={{ textAlign: 'center' }}>Puntos Marcador Exacto</th>
-                        <th style={{ textAlign: 'right' }}>Puntos Totales</th>
+                        <th>Apodo</th>
+                        <th style={{ textAlign: 'center' }}>Exacto</th>
+                        <th style={{ textAlign: 'right' }}>Total</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3006,9 +3006,9 @@ function App() {
                     <thead>
                       <tr>
                         <th>Pos</th>
-                        <th>Apodo (Nickname)</th>
-                        <th style={{ textAlign: 'center' }}>Puntos Marcador Exacto</th>
-                        <th style={{ textAlign: 'right' }}>Puntos Totales</th>
+                        <th>Apodo</th>
+                        <th style={{ textAlign: 'center' }}>Exacto</th>
+                        <th style={{ textAlign: 'right' }}>Total</th>
                       </tr>
                     </thead>
                     <tbody>

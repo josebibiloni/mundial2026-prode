@@ -695,3 +695,19 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1.5rem !important;
   }
 }
+
+/* Leaderboard mobile optimization */
+@media (max-width: 576px) {
+  .leaderboard-table th {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.75rem !important;
+  }
+  .leaderboard-table td {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.85rem !important;
+  }
+  .rank-cell {
+    width: 35px !important;
+  }
+}
+
