@@ -983,10 +983,10 @@ function App() {
 
   // Reglas de puntuación
   const calculatePoints = (pred, actual) => {
-    if (actual.status !== 'played' || actual.actualScoreA === null || actual.actualScoreB === null) {
+    if (actual.status !== 'played' || actual.actualScoreA === null || actual.actualScoreB === null || actual.actualScoreA === undefined || actual.actualScoreB === undefined) {
       return 0;
     }
-    if (!pred || pred.scoreA === null || pred.scoreB === null || pred.scoreA === undefined || pred.scoreB === undefined) {
+    if (!pred || pred.scoreA === null || pred.scoreB === null || pred.scoreA === undefined || pred.scoreB === undefined || pred.scoreA === '' || pred.scoreB === '') {
       return 0;
     }
 
@@ -994,6 +994,10 @@ function App() {
     const pB = parseInt(pred.scoreB);
     const aA = parseInt(actual.actualScoreA);
     const aB = parseInt(actual.actualScoreB);
+
+    if (isNaN(pA) || isNaN(pB) || isNaN(aA) || isNaN(aB)) {
+      return 0;
+    }
 
     const predOutcome = pA > pB ? 1 : pA < pB ? 2 : 0;
     const actualOutcome = aA > aB ? 1 : aA < aB ? 2 : 0;
@@ -1006,7 +1010,7 @@ function App() {
     if (outcomeMatch) points += 3;
     if (exactLocal) points += 1;
     if (exactAway) points += 1;
-    if (outcomeMatch && exactLocal && exactAway) points += 2; // Perfect score bonus
+    if (exactLocal && exactAway) points += 2; // Perfect score bonus
 
     return points;
   };
