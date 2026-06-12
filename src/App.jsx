@@ -68,6 +68,20 @@ function App() {
     return new Date(year, month, day, hours, minutes);
   };
 
+  const sortMatchesChronologically = (matchList) => {
+    return [...matchList].sort((a, b) => {
+      const dateA = parseMatchDate(a.date || a.match_date);
+      const dateB = parseMatchDate(b.date || b.match_date);
+      if (!dateA && !dateB) return a.id - b.id;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      return a.id - b.id;
+    });
+  };
+
   const isMatchPredictionsClosed = (match) => {
     if (!match) return true;
     if (match.status === 'played' || match.status === 'live') return true;
@@ -667,7 +681,7 @@ function App() {
             status: m.status,
             stage: m.stage !== undefined ? m.stage : (m.id >= 73 ? 2 : 1)
           }));
-          setMatches(mappedMatches);
+          setMatches(sortMatchesChronologically(mappedMatches));
         } else {
           const dbSeed = initialMatches.map(m => ({
             id: m.id,
@@ -689,7 +703,7 @@ function App() {
             const fallbackSeed = dbSeed.map(({ stage, ...rest }) => rest);
             await supabase.from('matches').insert(fallbackSeed);
           }
-          setMatches(initialMatches);
+          setMatches(sortMatchesChronologically(initialMatches));
         }
 
         // Cargar Pronósticos
