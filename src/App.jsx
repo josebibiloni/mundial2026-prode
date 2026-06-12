@@ -72,15 +72,57 @@ function App() {
     if (!match) return true;
     if (match.status === 'played' || match.status === 'live') return true;
 
-    const parsedDate = parseMatchDate(match.date || match.match_date);
-    if (!parsedDate) return true;
+    const parts = (match.date || match.match_date || '').split(' - ');
+    if (parts.length < 2) return true;
+    const dateTokens = parts[0].split(' ');
+    if (dateTokens.length < 3) return true;
+    const day = parseInt(dateTokens[0]);
+    const monthStr = dateTokens[1];
+    const year = parseInt(dateTokens[2]);
 
-    // Plazo de cierre: 23:59:59 del día anterior al partido
-    const dayBefore = new Date(parsedDate);
-    dayBefore.setDate(dayBefore.getDate() - 1);
-    dayBefore.setHours(23, 59, 59, 999);
+    const months = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    };
+    const month = months[monthStr] !== undefined ? months[monthStr] : 5;
 
-    return getSecureDate() >= dayBefore;
+    // Calculamos el día anterior usando la aritmética de fechas local del navegador
+    const localMatchDate = new Date(year, month, day);
+    localMatchDate.setDate(localMatchDate.getDate() - 1);
+
+    // Creamos la fecha límite a las 23:59:59 interpretando en la zona horaria del torneo (GMT-3)
+    const pad = (n) => String(n).padStart(2, '0');
+    const deadlineIso = `${localMatchDate.getFullYear()}-${pad(localMatchDate.getMonth() + 1)}-${pad(localMatchDate.getDate())}T23:59:59-03:00`;
+    const deadline = new Date(deadlineIso);
+
+    return getSecureDate() >= deadline;
+  };
+
+  const getMatchDeadlineString = (match) => {
+    if (!match) return '';
+    const parts = (match.date || match.match_date || '').split(' - ');
+    if (parts.length < 2) return '';
+    const dateTokens = parts[0].split(' ');
+    if (dateTokens.length < 3) return '';
+    const day = parseInt(dateTokens[0]);
+    const monthStr = dateTokens[1];
+    const year = parseInt(dateTokens[2]);
+
+    const months = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    };
+    const month = months[monthStr] !== undefined ? months[monthStr] : 5;
+
+    const localMatchDate = new Date(year, month, day);
+    localMatchDate.setDate(localMatchDate.getDate() - 1);
+
+    const monthNamesSpanish = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    return `${localMatchDate.getDate()} de ${monthNamesSpanish[localMatchDate.getMonth()]} 23:59`;
   };
 
   const syncServerTime = async () => {
@@ -2779,7 +2821,7 @@ function App() {
 
                     {currentMatch.status !== 'played' && currentMatch.status !== 'live' && isMatchPredictionsClosed(currentMatch) && (
                       <div style={{ color: '#ffb703', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem', background: 'rgba(255, 183, 3, 0.1)', padding: '0.5rem', borderRadius: '4px' }}>
-                        🔒 Pronósticos cerrados por fecha límite ({(currentMatch.stage === 2 || currentMatch.id >= 73) ? '28 de Junio 00:00' : '10 de Junio 23:59'}).
+                        🔒 Pronósticos cerrados por fecha límite ({getMatchDeadlineString(currentMatch)}).
                       </div>
                     )}
 
