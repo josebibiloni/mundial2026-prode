@@ -65,7 +65,10 @@ function App() {
     
     const month = months[monthStr] !== undefined ? months[monthStr] : 5;
     
-    return new Date(year, month, day, hours, minutes);
+    // Parse using timezone offset -03:00 so it represents the exact absolute epoch time globally
+    const pad = (n) => String(n).padStart(2, '0');
+    const isoStr = `${year}-${pad(month + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00-03:00`;
+    return new Date(isoStr);
   };
 
   const sortMatchesChronologically = (matchList) => {
@@ -86,57 +89,48 @@ function App() {
     if (!match) return true;
     if (match.status === 'played' || match.status === 'live') return true;
 
-    const parts = (match.date || match.match_date || '').split(' - ');
-    if (parts.length < 2) return true;
-    const dateTokens = parts[0].split(' ');
-    if (dateTokens.length < 3) return true;
-    const day = parseInt(dateTokens[0]);
-    const monthStr = dateTokens[1];
-    const year = parseInt(dateTokens[2]);
+    const parsedDate = parseMatchDate(match.date || match.match_date);
+    if (!parsedDate) return true;
 
-    const months = {
-      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-    };
-    const month = months[monthStr] !== undefined ? months[monthStr] : 5;
-
-    // Calculamos el día anterior usando la aritmética de fechas local del navegador
-    const localMatchDate = new Date(year, month, day);
-    localMatchDate.setDate(localMatchDate.getDate() - 1);
-
-    // Creamos la fecha límite a las 23:59:59 interpretando en la zona horaria del torneo (GMT-3)
-    const pad = (n) => String(n).padStart(2, '0');
-    const deadlineIso = `${localMatchDate.getFullYear()}-${pad(localMatchDate.getMonth() + 1)}-${pad(localMatchDate.getDate())}T23:59:59-03:00`;
-    const deadline = new Date(deadlineIso);
-
+    // Predictions are closed exactly 2 hours before match start time
+    const deadline = new Date(parsedDate.getTime() - 2 * 60 * 60 * 1000);
     return getSecureDate() >= deadline;
   };
 
   const getMatchDeadlineString = (match) => {
     if (!match) return '';
-    const parts = (match.date || match.match_date || '').split(' - ');
-    if (parts.length < 2) return '';
-    const dateTokens = parts[0].split(' ');
-    if (dateTokens.length < 3) return '';
-    const day = parseInt(dateTokens[0]);
-    const monthStr = dateTokens[1];
-    const year = parseInt(dateTokens[2]);
+    const parsedDate = parseMatchDate(match.date || match.match_date);
+    if (!parsedDate) return '';
 
-    const months = {
-      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-    };
-    const month = months[monthStr] !== undefined ? months[monthStr] : 5;
+    const deadline = new Date(parsedDate.getTime() - 2 * 60 * 60 * 1000);
 
-    const localMatchDate = new Date(year, month, day);
-    localMatchDate.setDate(localMatchDate.getDate() - 1);
-
-    const monthNamesSpanish = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-
-    return `${localMatchDate.getDate()} de ${monthNamesSpanish[localMatchDate.getMonth()]} 23:59`;
+    try {
+      const formatter = new Intl.DateTimeFormat('es-AR', {
+        timeZone: 'America/Buenos_Aires',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      // Example formatted: "12 de junio 19:00"
+      const formatted = formatter.format(deadline);
+      // Clean up extra spaces/prepositions just in case, capitalizing month names if preferred
+      // but "12 de junio 19:00" is standard and correct.
+      return formatted;
+    } catch (e) {
+      const monthNamesSpanish = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+      // Fallback conversion assuming target timezone is GMT-3
+      const gmt3Time = new Date(deadline.getTime() - (3 * 60 * 60 * 1000));
+      const day = gmt3Time.getUTCDate();
+      const month = gmt3Time.getUTCMonth();
+      const hours = String(gmt3Time.getUTCHours()).padStart(2, '0');
+      const minutes = String(gmt3Time.getUTCMinutes()).padStart(2, '0');
+      return `${day} de ${monthNamesSpanish[month]} ${hours}:${minutes}`;
+    }
   };
 
   const syncServerTime = async () => {
