@@ -21,6 +21,57 @@ const welcomeBanterPhrases = [
   "A ver qué verdura tirás hoy en los pronósticos. ¡Preparate para quedar último! 🏹"
 ];
 
+const apiTeamNameToSpanish = {
+  'Algeria': 'Argelia',
+  'Argentina': 'Argentina',
+  'Australia': 'Australia',
+  'Austria': 'Austria',
+  'Belgium': 'Bélgica',
+  'Bosnia and Herzegovina': 'Bosnia y Herzegovina',
+  'Brazil': 'Brasil',
+  'Canada': 'Canadá',
+  'Cape Verde': 'Cabo Verde',
+  'Colombia': 'Colombia',
+  'Croatia': 'Croacia',
+  'Curaçao': 'Curazao',
+  'Czech Republic': 'República Checa',
+  'Democratic Republic of the Congo': 'RD Congo',
+  'Ecuador': 'Ecuador',
+  'Egypt': 'Egipto',
+  'England': 'Inglaterra',
+  'France': 'Francia',
+  'Germany': 'Alemania',
+  'Ghana': 'Ghana',
+  'Haiti': 'Haití',
+  'Iran': 'Irán',
+  'Iraq': 'Irak',
+  'Ivory Coast': 'Costa de Marfil',
+  'Japan': 'Japón',
+  'Jordan': 'Jordania',
+  'Mexico': 'México',
+  'Morocco': 'Marruecos',
+  'Netherlands': 'Países Bajos',
+  'New Zealand': 'Nueva Zelanda',
+  'Norway': 'Noruega',
+  'Panama': 'Panamá',
+  'Paraguay': 'Paraguay',
+  'Portugal': 'Portugal',
+  'Qatar': 'Qatar',
+  'Saudi Arabia': 'Arabia Saudita',
+  'Scotland': 'Escocia',
+  'Senegal': 'Senegal',
+  'South Africa': 'Sudáfrica',
+  'South Korea': 'Corea del Sur',
+  'Spain': 'España',
+  'Sweden': 'Suecia',
+  'Switzerland': 'Suiza',
+  'Tunisia': 'Túnez',
+  'Turkey': 'Turquía',
+  'United States': 'Estados Unidos',
+  'Uruguay': 'Uruguay',
+  'Uzbekistan': 'Uzbekistán'
+};
+
 function App() {
   const isSupabaseConnected = true;
 
@@ -1944,6 +1995,8 @@ function App() {
         // Fallback a los partidos cargados en memoria
         dbMatches = matches.map(m => ({
           id: m.id,
+          team_a: m.teamA,
+          team_b: m.teamB,
           actual_score_a: m.actualScoreA,
           actual_score_b: m.actualScoreB,
           status: m.status
@@ -1954,17 +2007,34 @@ function App() {
       const dbUpdates = [];
 
       data.games.forEach(apiGame => {
-        const matchId = parseInt(apiGame.id);
-        const dbMatch = dbMatches.find(m => m.id === matchId);
-        if (dbMatch) {
+        // Encontrar el partido correspondiente
+        // Primero intentamos emparejar por nombre de equipos (traducidos al español)
+        const spanishHome = apiTeamNameToSpanish[apiGame.home_team_name_en] || apiGame.home_team_name_en;
+        const spanishAway = apiTeamNameToSpanish[apiGame.away_team_name_en] || apiGame.away_team_name_en;
+
+        const dbMatch = dbMatches.find(m => {
+          if (!m.team_a || !m.team_b) return false;
+          const mHome = m.team_a.trim().toLowerCase();
+          const mAway = m.team_b.trim().toLowerCase();
+          const sHome = spanishHome.trim().toLowerCase();
+          const sAway = spanishAway.trim().toLowerCase();
+
+          return (mHome === sHome && mAway === sAway) || (mHome === sAway && mAway === sHome);
+        });
+
+        // Si no se encuentra por equipos (ej: fase de eliminación con placeholders como "Ganador Match 74"),
+        // intentamos mapear por ID si el partido no es de fase de grupos en el API
+        const finalMatchMatch = dbMatch || (apiGame.type !== 'group' ? dbMatches.find(m => m.id === parseInt(apiGame.id)) : null);
+
+        if (finalMatchMatch) {
           const apiScoreA = apiGame.home_score !== null && apiGame.home_score !== 'null' && apiGame.home_score !== undefined ? parseInt(apiGame.home_score) : null;
           const apiScoreB = apiGame.away_score !== null && apiGame.away_score !== 'null' && apiGame.away_score !== undefined ? parseInt(apiGame.away_score) : null;
           const apiStatus = apiGame.finished === "TRUE" ? "played" : (apiGame.time_elapsed !== "notstarted" ? "live" : "scheduled");
 
-          if (dbMatch.actual_score_a !== apiScoreA || dbMatch.actual_score_b !== apiScoreB || dbMatch.status !== apiStatus) {
+          if (finalMatchMatch.actual_score_a !== apiScoreA || finalMatchMatch.actual_score_b !== apiScoreB || finalMatchMatch.status !== apiStatus) {
             hasChanges = true;
             dbUpdates.push({
-              id: matchId,
+              id: finalMatchMatch.id,
               actual_score_a: apiScoreA,
               actual_score_b: apiScoreB,
               status: apiStatus
