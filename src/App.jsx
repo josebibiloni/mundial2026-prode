@@ -2006,11 +2006,11 @@ function App() {
       data.games.forEach(apiGame => {
         // Encontrar el partido correspondiente
         // Primero intentamos emparejar por nombre de equipos (traducidos al español)
-        const spanishHome = apiTeamNameToSpanish[apiGame.home_team_name_en] || apiGame.home_team_name_en;
-        const spanishAway = apiTeamNameToSpanish[apiGame.away_team_name_en] || apiGame.away_team_name_en;
+        const spanishHome = apiGame.home_team_name_en ? (apiTeamNameToSpanish[apiGame.home_team_name_en] || apiGame.home_team_name_en) : '';
+        const spanishAway = apiGame.away_team_name_en ? (apiTeamNameToSpanish[apiGame.away_team_name_en] || apiGame.away_team_name_en) : '';
 
         const dbMatch = dbMatches.find(m => {
-          if (!m.team_a || !m.team_b) return false;
+          if (!m.team_a || !m.team_b || !spanishHome || !spanishAway) return false;
           const mHome = m.team_a.trim().toLowerCase();
           const mAway = m.team_b.trim().toLowerCase();
           const sHome = spanishHome.trim().toLowerCase();
