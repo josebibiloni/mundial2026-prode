@@ -285,22 +285,14 @@ function App() {
     }
   }, []);
 
-  // Redirección inteligente al ingresar (Tabla Principal o primer partido incompleto)
+  // Redirección inteligente al ingresar (primer partido por disputarse)
   useEffect(() => {
     if (currentUser && currentTenant && matches.length > 0 && !hasRedirected) {
-      const userPreds = predictions[`${currentTenant.id}_${currentUser.id}`] || predictions[`${currentTenant.id}_${(currentUser.username || '').trim()}`] || {};
-      const firstUnpredictedIdx = getFirstIncompleteMatchIndex(userPreds);
-
-      if (firstUnpredictedIdx !== -1) {
-        setActiveTab('predictions');
-        setCurrentMatchIndex(firstUnpredictedIdx);
-      } else {
-        setActiveTab('leaderboard');
-        setCurrentMatchIndex(0);
-      }
+      setActiveTab('predictions');
+      setCurrentMatchIndex(getFirstUpcomingMatchIndex());
       setHasRedirected(true);
     }
-  }, [currentUser, currentTenant, matches, predictions, hasRedirected]);
+  }, [currentUser, currentTenant, matches, hasRedirected]);
 
   // Configuración de Boludeo Personalizado
   const [showSetupBoludeo, setShowSetupBoludeo] = useState(false);
@@ -428,6 +420,11 @@ function App() {
         return !pred || pred.scoreA === '' || pred.scoreA === null || pred.scoreB === '' || pred.scoreB === null;
       });
     }
+  };
+
+  const getFirstUpcomingMatchIndex = () => {
+    const idx = matches.findIndex(m => !isMatchPredictionsClosed(m));
+    return idx !== -1 ? idx : 0;
   };
 
   // Escuchar enlaces de invitación por URL (?invite=true&tenant=caseros2026)
@@ -4277,11 +4274,7 @@ function App() {
               </button>
               <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => {
                 setActiveTab('predictions');
-                const userPreds = predictions[`${currentTenant.id}_${currentUser.id}`] || predictions[`${currentTenant.id}_${(currentUser.username || '').trim()}`] || {};
-                const firstUnpredictedIdx = getFirstIncompleteMatchIndex(userPreds);
-                if (firstUnpredictedIdx !== -1) {
-                  setCurrentMatchIndex(firstUnpredictedIdx);
-                }
+                setCurrentMatchIndex(getFirstUpcomingMatchIndex());
               }}>
                 📝 Mis Predicciones
               </button>
