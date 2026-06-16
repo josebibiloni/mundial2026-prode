@@ -116,6 +116,51 @@ CREATE TABLE IF NOT EXISTS mini_duels (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Deshabilitar RLS para permitir accesos anónimos de lectura/escritura en el juego
-ALTER TABLE mini_duels DISABLE ROW LEVEL SECURITY;
+-- =========================================================================
+-- CONFIGURACIÓN DE SEGURIDAD A NIVEL DE FILA (Row Level Security - RLS)
+-- Permite acceso anónimo de lectura, inserción y modificación para el juego,
+-- pero bloquea cualquier eliminación (DELETE) por seguridad.
+-- =========================================================================
+
+-- 1. Tabla tenants
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access on tenants" ON tenants FOR SELECT USING (true);
+CREATE POLICY "Allow public insert access on tenants" ON tenants FOR INSERT WITH CHECK (true);
+
+-- 2. Tabla participants
+ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access on participants" ON participants FOR SELECT USING (true);
+CREATE POLICY "Allow public insert access on participants" ON participants FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update access on participants" ON participants FOR UPDATE USING (true) WITH CHECK (true);
+
+-- 3. Tabla matches
+ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access on matches" ON matches FOR SELECT USING (true);
+CREATE POLICY "Allow public update access on matches" ON matches FOR UPDATE USING (true) WITH CHECK (true);
+
+-- 4. Tabla predictions
+ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access on predictions" ON predictions FOR SELECT USING (true);
+CREATE POLICY "Allow public insert access on predictions" ON predictions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update access on predictions" ON predictions FOR UPDATE USING (true) WITH CHECK (true);
+
+-- 5. Tabla daily_messages
+ALTER TABLE daily_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access on daily_messages" ON daily_messages FOR SELECT USING (true);
+CREATE POLICY "Allow public insert access on daily_messages" ON daily_messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update access on daily_messages" ON daily_messages FOR UPDATE USING (true) WITH CHECK (true);
+
+-- 6. Tabla boludeo_events
+ALTER TABLE boludeo_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access on boludeo_events" ON boludeo_events FOR SELECT USING (true);
+CREATE POLICY "Allow public insert access on boludeo_events" ON boludeo_events FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update access on boludeo_events" ON boludeo_events FOR UPDATE USING (true) WITH CHECK (true);
+
+-- 7. Tabla mini_duels
+ALTER TABLE mini_duels ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access on mini_duels" ON mini_duels FOR SELECT USING (true);
+CREATE POLICY "Allow public insert access on mini_duels" ON mini_duels FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update access on mini_duels" ON mini_duels FOR UPDATE USING (true) WITH CHECK (true);
+
+
 
