@@ -1515,47 +1515,50 @@ function App() {
       [team]: parsedVal
     };
 
-     if (isSupabaseConnected && supabase) {
-      try {
-        const predictionRow = {
-          tenant_id: currentTenant.id,
-          match_id: matchId,
-          score_a: team === 'scoreA' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreA === '' ? null : parseInt(matchPred.scoreA)),
-          score_b: team === 'scoreB' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreB === '' ? null : parseInt(matchPred.scoreB)),
-        };
+    // 1. Actualizar el estado local inmediatamente (No bloquea la UI/teclado)
+    setPredictions(prev => {
+      const next = { ...prev };
+      const nextKeyId = { ...(next[keyId] || {}) };
+      const nextKeyUsername = { ...(next[keyUsername] || {}) };
+      
+      nextKeyId[matchId] = updatedPred;
+      nextKeyUsername[matchId] = updatedPred;
+      
+      next[keyId] = nextKeyId;
+      next[keyUsername] = nextKeyUsername;
+      return next;
+    });
 
-        // Intentamos primero guardar usando participant_id
-        const { error } = await supabase.from('predictions').upsert({
-          ...predictionRow,
-          participant_id: currentUser.id
-        }, { onConflict: 'tenant_id,participant_id,match_id' });
+    // 2. Guardar en base de datos de manera asíncrona
+    if (isSupabaseConnected && supabase) {
+      const predictionRow = {
+        tenant_id: currentTenant.id,
+        match_id: matchId,
+        score_a: team === 'scoreA' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreA === '' ? null : parseInt(matchPred.scoreA)),
+        score_b: team === 'scoreB' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreB === '' ? null : parseInt(matchPred.scoreB)),
+      };
 
-        // Si la columna participant_id no existe (código 42703 o PGRST204), usamos participant_username
-        if (error && (error.code === '42703' || error.code === 'PGRST204' || error.message?.includes('participant_id'))) {
-          const { error: fallbackError } = await supabase.from('predictions').upsert({
+      // Ejecutar la escritura en segundo plano sin suspender la interfaz
+      (async () => {
+        try {
+          const { error } = await supabase.from('predictions').upsert({
             ...predictionRow,
-            participant_username: currentUser.username
-          }, { onConflict: 'tenant_id,participant_username,match_id' });
-          if (fallbackError) throw fallbackError;
-        } else if (error) {
-          throw error;
-        }
+            participant_id: currentUser.id
+          }, { onConflict: 'tenant_id,participant_id,match_id' });
 
-        setPredictions(prev => {
-          const next = { ...prev };
-          const nextKeyId = { ...(next[keyId] || {}) };
-          const nextKeyUsername = { ...(next[keyUsername] || {}) };
-          
-          nextKeyId[matchId] = updatedPred;
-          nextKeyUsername[matchId] = updatedPred;
-          
-          next[keyId] = nextKeyId;
-          next[keyUsername] = nextKeyUsername;
-          return next;
-        });
-      } catch (err) {
-        console.error("Error al guardar el pronóstico:", err);
-      }
+          if (error && (error.code === '42703' || error.code === 'PGRST204' || error.message?.includes('participant_id'))) {
+            const { error: fallbackError } = await supabase.from('predictions').upsert({
+              ...predictionRow,
+              participant_username: currentUser.username
+            }, { onConflict: 'tenant_id,participant_username,match_id' });
+            if (fallbackError) console.error("Error en fallback de base de datos:", fallbackError);
+          } else if (error) {
+            console.error("Error en base de datos:", error);
+          }
+        } catch (dbErr) {
+          console.error("Error asíncrono al guardar pronóstico:", dbErr);
+        }
+      })();
     }
   };
 
