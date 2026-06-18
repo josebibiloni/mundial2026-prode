@@ -1504,9 +1504,9 @@ function App() {
       return;
     }
 
-    const parsedVal = value === '' ? '' : Math.max(0, parseInt(value) || 0);
-    const key = `${currentTenant.id}_${currentUser.id}`;
-    const userPreds = predictions[key] || {};
+    const keyId = `${currentTenant.id}_${currentUser.id}`;
+    const keyUsername = `${currentTenant.id}_${(currentUser.username || '').trim()}`;
+    const userPreds = predictions[keyId] || predictions[keyUsername] || {};
     const matchPred = userPreds[matchId] || { scoreA: '', scoreB: '' };
 
     const updatedPred = {
@@ -1540,21 +1540,21 @@ function App() {
           throw error;
         }
 
-        const keyId = `${currentTenant.id}_${currentUser.id}`;
-        const keyUsername = `${currentTenant.id}_${currentUser.username}`;
-
-        const updatedPredictions = {
-          ...predictions,
-          [keyId]: {
-            ...predictions[keyId],
+        setPredictions(prev => {
+          const next = { ...prev };
+          const nextKeyId = next[keyId] || {};
+          const nextKeyUsername = next[keyUsername] || {};
+          
+          next[keyId] = {
+            ...nextKeyId,
             [matchId]: updatedPred
-          },
-          [keyUsername]: {
-            ...predictions[keyUsername],
+          };
+          next[keyUsername] = {
+            ...nextKeyUsername,
             [matchId]: updatedPred
-          }
-        };
-        setPredictions(updatedPredictions);
+          };
+          return next;
+        });
       } catch (err) {
         console.error("Error al guardar el pronóstico:", err);
       }
