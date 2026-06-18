@@ -1529,8 +1529,8 @@ function App() {
           participant_id: currentUser.id
         });
 
-        // Si la columna participant_id no existe (código 42703), usamos participant_username
-        if (error && (error.code === '42703' || error.message?.includes('participant_id'))) {
+        // Si la columna participant_id no existe (código 42703 o PGRST204), usamos participant_username
+        if (error && (error.code === '42703' || error.code === 'PGRST204' || error.message?.includes('participant_id'))) {
           await supabase.from('predictions').upsert({
             ...predictionRow,
             participant_username: currentUser.username
@@ -1854,7 +1854,7 @@ function App() {
                   participant_id: currentUser.id
                 });
                 
-                if (error && (error.code === '42703' || error.message?.includes('participant_id'))) {
+                if (error && (error.code === '42703' || error.code === 'PGRST204' || error.message?.includes('participant_id'))) {
                   await supabase.from('predictions').upsert({
                     ...predictionRow,
                     participant_username: currentUser.username
