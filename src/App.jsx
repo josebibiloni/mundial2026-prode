@@ -1527,14 +1527,15 @@ function App() {
         const { error } = await supabase.from('predictions').upsert({
           ...predictionRow,
           participant_id: currentUser.id
-        });
+        }, { onConflict: 'tenant_id,participant_id,match_id' });
 
         // Si la columna participant_id no existe (código 42703 o PGRST204), usamos participant_username
         if (error && (error.code === '42703' || error.code === 'PGRST204' || error.message?.includes('participant_id'))) {
-          await supabase.from('predictions').upsert({
+          const { error: fallbackError } = await supabase.from('predictions').upsert({
             ...predictionRow,
             participant_username: currentUser.username
-          });
+          }, { onConflict: 'tenant_id,participant_username,match_id' });
+          if (fallbackError) throw fallbackError;
         } else if (error) {
           throw error;
         }
@@ -1852,13 +1853,14 @@ function App() {
                 let { error } = await supabase.from('predictions').upsert({
                   ...predictionRow,
                   participant_id: currentUser.id
-                });
+                }, { onConflict: 'tenant_id,participant_id,match_id' });
                 
                 if (error && (error.code === '42703' || error.code === 'PGRST204' || error.message?.includes('participant_id'))) {
-                  await supabase.from('predictions').upsert({
+                  const { error: fallbackError } = await supabase.from('predictions').upsert({
                     ...predictionRow,
                     participant_username: currentUser.username
-                  });
+                  }, { onConflict: 'tenant_id,participant_username,match_id' });
+                  if (fallbackError) throw fallbackError;
                 }
                 successCount++;
               } catch (upsertErr) {
