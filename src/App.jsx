@@ -1543,17 +1543,14 @@ function App() {
 
         setPredictions(prev => {
           const next = { ...prev };
-          const nextKeyId = next[keyId] || {};
-          const nextKeyUsername = next[keyUsername] || {};
+          const nextKeyId = { ...(next[keyId] || {}) };
+          const nextKeyUsername = { ...(next[keyUsername] || {}) };
           
-          next[keyId] = {
-            ...nextKeyId,
-            [matchId]: updatedPred
-          };
-          next[keyUsername] = {
-            ...nextKeyUsername,
-            [matchId]: updatedPred
-          };
+          nextKeyId[matchId] = updatedPred;
+          nextKeyUsername[matchId] = updatedPred;
+          
+          next[keyId] = nextKeyId;
+          next[keyUsername] = nextKeyUsername;
           return next;
         });
       } catch (err) {
