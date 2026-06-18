@@ -1504,7 +1504,7 @@ function App() {
       return;
     }
 
-    const parsedVal = value === '' ? '' : Math.max(0, parseInt(value) || 0);
+    const parsedVal = value === '' ? '' : parseInt(value);
     const keyId = `${currentTenant.id}_${currentUser.id}`;
     const keyUsername = `${currentTenant.id}_${(currentUser.username || '').trim()}`;
     const userPreds = predictions[keyId] || predictions[keyUsername] || {};
@@ -1520,8 +1520,8 @@ function App() {
         const predictionRow = {
           tenant_id: currentTenant.id,
           match_id: matchId,
-          score_a: team === 'scoreA' ? parsedVal : matchPred.scoreA,
-          score_b: team === 'scoreB' ? parsedVal : matchPred.scoreB,
+          score_a: team === 'scoreA' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreA === '' ? null : parseInt(matchPred.scoreA)),
+          score_b: team === 'scoreB' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreB === '' ? null : parseInt(matchPred.scoreB)),
         };
 
         // Intentamos primero guardar usando participant_id
