@@ -2080,12 +2080,18 @@ function App() {
     : null;
 
   const handleNextMatch = () => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     if (currentMatchIndex < filteredMatches.length - 1) {
       setCurrentMatchIndex(currentMatchIndex + 1);
     }
   };
 
   const handlePrevMatch = () => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     if (currentMatchIndex > 0) {
       setCurrentMatchIndex(currentMatchIndex - 1);
     }
