@@ -2915,22 +2915,32 @@ function App() {
                         {/* Inputs Grandes */}
                         <div className="prediction-inputs" style={{ gap: '1rem' }}>
                           <input
-                             type="number"
-                             min="0"
+                             type="text"
+                             inputMode="numeric"
+                             pattern="[0-9]*"
                              className="score-input"
-                             style={{ width: '70px', height: '70px', fontSize: '2rem' }}
+                             style={{ width: '70px', height: '70px', fontSize: '2rem', textAlign: 'center' }}
                              value={currentUserPrediction?.scoreA ?? ''}
-                             onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreA', e.target.value)}
+                             onFocus={(e) => e.target.select()}
+                             onChange={(e) => {
+                               const val = e.target.value.replace(/\D/g, '');
+                               handlePredictionChange(currentMatch.id, 'scoreA', val);
+                             }}
                              disabled={currentMatch.status === 'played' || currentMatch.status === 'live' || isMatchPredictionsClosed(currentMatch)}
                            />
                            <span className="score-separator" style={{ fontSize: '2rem' }}>-</span>
                            <input
-                             type="number"
-                             min="0"
+                             type="text"
+                             inputMode="numeric"
+                             pattern="[0-9]*"
                              className="score-input"
-                             style={{ width: '70px', height: '70px', fontSize: '2rem' }}
+                             style={{ width: '70px', height: '70px', fontSize: '2rem', textAlign: 'center' }}
                              value={currentUserPrediction?.scoreB ?? ''}
-                             onChange={(e) => handlePredictionChange(currentMatch.id, 'scoreB', e.target.value)}
+                             onFocus={(e) => e.target.select()}
+                             onChange={(e) => {
+                               const val = e.target.value.replace(/\D/g, '');
+                               handlePredictionChange(currentMatch.id, 'scoreB', val);
+                             }}
                              disabled={currentMatch.status === 'played' || currentMatch.status === 'live' || isMatchPredictionsClosed(currentMatch)}
                            />
                         </div>
