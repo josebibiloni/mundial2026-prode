@@ -1842,13 +1842,15 @@ function App() {
         if (isSupabaseConnected && supabase) {
           for (const matchId of matchIds) {
             const pred = filteredPredsToImport[matchId];
-            if (pred && (pred.scoreA !== '' || pred.scoreB !== '')) {
+            if (pred && (pred.scoreA !== '' && pred.scoreA !== null && pred.scoreB !== '' && pred.scoreB !== null)) {
               try {
+                const scoreAVal = parseInt(pred.scoreA);
+                const scoreBVal = parseInt(pred.scoreB);
                 const predictionRow = {
                   tenant_id: currentTenant.id,
                   match_id: parseInt(matchId),
-                  score_a: pred.scoreA === '' ? 0 : parseInt(pred.scoreA),
-                  score_b: pred.scoreB === '' ? 0 : parseInt(pred.scoreB),
+                  score_a: isNaN(scoreAVal) ? null : scoreAVal,
+                  score_b: isNaN(scoreBVal) ? null : scoreBVal,
                 };
                 
                 let { error } = await supabase.from('predictions').upsert({
