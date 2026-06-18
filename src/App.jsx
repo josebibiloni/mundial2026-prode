@@ -4283,8 +4283,10 @@ function App() {
                 📊 Tabla Principal
               </button>
               <button className={`tab-btn ${activeTab === 'predictions' ? 'active' : ''}`} onClick={() => {
-                setActiveTab('predictions');
-                setCurrentMatchIndex(getFirstUpcomingMatchIndex());
+                if (activeTab !== 'predictions') {
+                  setActiveTab('predictions');
+                  setCurrentMatchIndex(getFirstUpcomingMatchIndex());
+                }
               }}>
                 📝 Mis Predicciones
               </button>
