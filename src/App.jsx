@@ -80,7 +80,7 @@ function App() {
   const [performanceTimeOnLoad, setPerformanceTimeOnLoad] = useState(null);
 
   const getSecureDate = () => {
-    if (serverTimeOnLoad !== null && performanceTimeOnLoad !== null) {
+    if (serverTimeOnLoad !== null && !isNaN(serverTimeOnLoad) && performanceTimeOnLoad !== null) {
       const elapsed = performance.now() - performanceTimeOnLoad;
       return new Date(serverTimeOnLoad + elapsed);
     }
@@ -189,7 +189,7 @@ function App() {
       const start = performance.now();
       const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { signal: AbortSignal.timeout(4000) });
       const data = await res.json();
-      const serverUtc = new Date(data.utc_datetime).getTime();
+      const serverUtc = data.unixtime ? (data.unixtime * 1000) : new Date(data.utc_datetime).getTime();
       const latency = (performance.now() - start) / 2;
       setServerTimeOnLoad(serverUtc + latency);
       setPerformanceTimeOnLoad(performance.now());
@@ -200,7 +200,7 @@ function App() {
         const start = performance.now();
         const res = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC', { signal: AbortSignal.timeout(4000) });
         const data = await res.json();
-        const serverUtc = new Date(data.dateTime.endsWith('Z') ? data.dateTime : (data.dateTime + 'Z')).getTime();
+        const serverUtc = Date.UTC(data.year, data.month - 1, data.day, data.hour, data.minute, data.seconds, data.milliSeconds);
         const latency = (performance.now() - start) / 2;
         setServerTimeOnLoad(serverUtc + latency);
         setPerformanceTimeOnLoad(performance.now());
