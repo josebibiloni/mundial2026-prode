@@ -200,7 +200,7 @@ function App() {
         const start = performance.now();
         const res = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC', { signal: AbortSignal.timeout(4000) });
         const data = await res.json();
-        const serverUtc = new Date(data.dateTime).getTime();
+        const serverUtc = new Date(data.dateTime.endsWith('Z') ? data.dateTime : (data.dateTime + 'Z')).getTime();
         const latency = (performance.now() - start) / 2;
         setServerTimeOnLoad(serverUtc + latency);
         setPerformanceTimeOnLoad(performance.now());
