@@ -1504,6 +1504,7 @@ function App() {
       return;
     }
 
+    const parsedVal = value === '' ? '' : Math.max(0, parseInt(value) || 0);
     const keyId = `${currentTenant.id}_${currentUser.id}`;
     const keyUsername = `${currentTenant.id}_${(currentUser.username || '').trim()}`;
     const userPreds = predictions[keyId] || predictions[keyUsername] || {};
