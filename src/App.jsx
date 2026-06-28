@@ -3100,6 +3100,68 @@ function App() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                   Standings finales e inalterables de la Fase de Grupos.
                 </p>
+
+                {/* Destacados Fase Inicial (Top 3) */}
+                {leaderboardPhase1.length > 0 && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '2rem',
+                    background: 'rgba(255,255,255,0.03)',
+                    padding: '1.25rem',
+                    borderRadius: '12px',
+                    border: '1px solid var(--glass-border)'
+                  }}>
+                    {/* Campeón */}
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.03))',
+                      border: '1px solid rgba(255, 215,  gold, 0.3)',
+                      boxShadow: '0 4px 12px rgba(255, 215, 0, 0.08)'
+                    }}>
+                      <div style={{ fontSize: '1.5rem' }}>👑</div>
+                      <div style={{ fontSize: '0.75rem', color: '#ffd700', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold', marginTop: '0.25rem' }}>Campeón Fase 1</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.1rem' }}>{leaderboardPhase1[0]?.points} pts</div>
+                    </div>
+
+                    {/* Subcampeón */}
+                    {leaderboardPhase1.length > 1 && (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        background: 'linear-gradient(135deg, rgba(192, 192, 192, 0.12), rgba(192, 192, 192, 0.02))',
+                        border: '1px solid rgba(192, 192, 192, 0.25)'
+                      }}>
+                        <div style={{ fontSize: '1.3rem' }}>🥈</div>
+                        <div style={{ fontSize: '0.75rem', color: '#c0c0c0', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>2º Puesto</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.1rem' }}>{leaderboardPhase1[1]?.points} pts</div>
+                      </div>
+                    )}
+
+                    {/* Tercer Puesto */}
+                    {leaderboardPhase1.length > 2 && (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        background: 'linear-gradient(135deg, rgba(205, 127, 50, 0.1), rgba(205, 127, 50, 0.02))',
+                        border: '1px solid rgba(205, 127, 50, 0.2)'
+                      }}>
+                        <div style={{ fontSize: '1.2rem' }}>🥉</div>
+                        <div style={{ fontSize: '0.75rem', color: '#cd7f32', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>3º Puesto</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.1rem' }}>{leaderboardPhase1[2]?.points} pts</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div style={{ overflowX: 'auto', marginBottom: '3rem' }}>
                   <table className="leaderboard-table">
                     <thead>
@@ -3113,7 +3175,9 @@ function App() {
                     <tbody>
                       {leaderboardPhase1.map((row, idx) => (
                         <tr key={row.id} className="leaderboard-row">
-                          <td className="rank-cell">{idx + 1}º</td>
+                          <td className="rank-cell">
+                            {idx === 0 ? '👑 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : ''}{idx + 1}º
+                          </td>
                           <td>
                             <span
                               style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
