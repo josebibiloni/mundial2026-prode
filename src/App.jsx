@@ -3188,147 +3188,298 @@ function App() {
             {/* PESTAÑA: Tabla de Posiciones */}
             {activeTab === 'leaderboard' && (
               <div className="glass-card">
-                {/* TABLA DE FASE 1 */}
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  🏆 Tabla Fase de Grupos
-                  <span style={{ fontSize: '0.8rem', background: '#00ff87', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 1</span>
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                  Standings finales e inalterables de la Fase de Grupos.
-                </p>
+                {/* Lógica para ordenar las tablas según hasPhase2MatchesPlayed */}
+                {!hasPhase2MatchesPlayed ? (
+                  <>
+                    {/* TABLA DE FASE 1 (Predeterminada arriba al inicio) */}
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      🏆 Tabla Fase de Grupos
+                      <span style={{ fontSize: '0.8rem', background: '#00ff87', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 1</span>
+                    </h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                      Standings finales e inalterables de la Fase de Grupos.
+                    </p>
 
-                {/* Destacados Fase Inicial (Top 3) */}
-                {leaderboardPhase1.length > 0 && (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: '1rem',
-                    marginBottom: '2rem',
-                    background: 'rgba(255,255,255,0.03)',
-                    padding: '1.25rem',
-                    borderRadius: '12px',
-                    border: '1px solid var(--glass-border)'
-                  }}>
-                    {/* Campeón */}
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '0.75rem',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.03))',
-                      border: '1px solid rgba(255, 215,  gold, 0.3)',
-                      boxShadow: '0 4px 12px rgba(255, 215, 0, 0.08)'
-                    }}>
-                      <div style={{ fontSize: '1.5rem' }}>👑</div>
-                      <div style={{ fontSize: '0.75rem', color: '#ffd700', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold', marginTop: '0.25rem' }}>Campeón Fase 1</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.1rem' }}>{leaderboardPhase1[0]?.points} pts</div>
+                    {/* Destacados Fase Inicial (Top 3) */}
+                    {leaderboardPhase1.length > 0 && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                        gap: '1rem',
+                        marginBottom: '2rem',
+                        background: 'rgba(255,255,255,0.03)',
+                        padding: '1.25rem',
+                        borderRadius: '12px',
+                        border: '1px solid var(--glass-border)'
+                      }}>
+                        {/* Campeón */}
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.03))',
+                          border: '1px solid rgba(255, 215, 0, 0.3)',
+                          boxShadow: '0 4px 12px rgba(255, 215, 0, 0.08)'
+                        }}>
+                          <div style={{ fontSize: '1.5rem' }}>👑</div>
+                          <div style={{ fontSize: '0.75rem', color: '#ffd700', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold', marginTop: '0.25rem' }}>Campeón Fase 1</div>
+                          <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
+                          <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', marginTop: '0.1rem', fontWeight: 'bold' }}>{leaderboardPhase1[0]?.points} pts</div>
+                        </div>
+
+                        {/* Subcampeón */}
+                        {leaderboardPhase1.length > 1 && (
+                          <div style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, rgba(192, 192, 192, 0.12), rgba(192, 192, 192, 0.02))',
+                            border: '1px solid rgba(192, 192, 192, 0.25)'
+                          }}>
+                            <div style={{ fontSize: '1.3rem' }}>🥈</div>
+                            <div style={{ fontSize: '0.75rem', color: '#c0c0c0', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>2º Puesto</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[1]?.points} pts</div>
+                          </div>
+                        )}
+
+                        {/* Tercer Puesto */}
+                        {leaderboardPhase1.length > 2 && (
+                          <div style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, rgba(205, 127, 50, 0.1), rgba(205, 127, 50, 0.02))',
+                            border: '1px solid rgba(205, 127, 50, 0.2)'
+                          }}>
+                            <div style={{ fontSize: '1.2rem' }}>🥉</div>
+                            <div style={{ fontSize: '0.75rem', color: '#cd7f32', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>3º Puesto</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[2]?.points} pts</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div style={{ overflowX: 'auto', marginBottom: '3rem' }}>
+                      <table className="leaderboard-table">
+                        <thead>
+                          <tr>
+                            <th>Pos</th>
+                            <th>Apodo</th>
+                            <th style={{ textAlign: 'center' }}>Exacto</th>
+                            <th style={{ textAlign: 'right' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboardPhase1.map((row, idx) => (
+                            <tr key={row.id} className="leaderboard-row">
+                              <td className="rank-cell">
+                                {idx === 0 ? '👑 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : ''}{idx + 1}º
+                              </td>
+                              <td>
+                                <span
+                                  style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
+                                  title="Haz clic para ver el perfil"
+                                  onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
+                                >
+                                  {row.username}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
+                              <td className="points-cell">{row.points} pts</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
 
-                    {/* Subcampeón */}
-                    {leaderboardPhase1.length > 1 && (
+                    {/* TABLA DE FASE 2 (Abajo por ahora) */}
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
+                      🏆 Tabla Fase Final
+                      <span style={{ fontSize: '0.8rem', background: 'gold', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 2</span>
+                    </h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                      Standings para la Fase de Eliminación directa (Octavos de Final, Cuartos, Semifinal y Final). Comienza en 0 pts.
+                    </p>
+                    <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+                      <table className="leaderboard-table">
+                        <thead>
+                          <tr>
+                            <th>Pos</th>
+                            <th>Apodo</th>
+                            <th style={{ textAlign: 'center' }}>Exacto</th>
+                            <th style={{ textAlign: 'right' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboardPhase2.map((row, idx) => (
+                            <tr key={row.id} className="leaderboard-row">
+                              <td className="rank-cell">{idx + 1}º</td>
+                              <td>
+                                <span
+                                  style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
+                                  title="Haz clic para ver el perfil"
+                                  onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
+                                >
+                                  {row.username}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
+                              <td className="points-cell" style={{ color: 'gold', fontWeight: 'bold' }}>{row.points} pts</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* TABLA DE FASE 2 (Arriba ya que comenzó a jugarse) */}
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      🏆 Tabla Fase Final
+                      <span style={{ fontSize: '0.8rem', background: 'gold', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 2</span>
+                    </h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                      Standings para la Fase de Eliminación directa (Octavos de Final, Cuartos, Semifinal y Final). Comienza en 0 pts.
+                    </p>
+                    <div style={{ overflowX: 'auto', marginBottom: '3rem' }}>
+                      <table className="leaderboard-table">
+                        <thead>
+                          <tr>
+                            <th>Pos</th>
+                            <th>Apodo</th>
+                            <th style={{ textAlign: 'center' }}>Exacto</th>
+                            <th style={{ textAlign: 'right' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboardPhase2.map((row, idx) => (
+                            <tr key={row.id} className="leaderboard-row">
+                              <td className="rank-cell">
+                                {idx === 0 ? '👑 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : ''}{idx + 1}º
+                              </td>
+                              <td>
+                                <span
+                                  style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
+                                  title="Haz clic para ver el perfil"
+                                  onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
+                                >
+                                  {row.username}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
+                              <td className="points-cell" style={{ color: 'gold', fontWeight: 'bold' }}>{row.points} pts</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* TABLA DE FASE 1 (Abajo de consulta histórica) */}
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
+                      🏆 Tabla Fase de Grupos
+                      <span style={{ fontSize: '0.8rem', background: '#00ff87', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 1</span>
+                    </h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                      Standings finales e inalterables de la Fase de Grupos.
+                    </p>
+
+                    {/* Destacados Fase Inicial (Top 3) */}
+                    {leaderboardPhase1.length > 0 && (
                       <div style={{
-                        textAlign: 'center',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        background: 'linear-gradient(135deg, rgba(192, 192, 192, 0.12), rgba(192, 192, 192, 0.02))',
-                        border: '1px solid rgba(192, 192, 192, 0.25)'
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                        gap: '1rem',
+                        marginBottom: '2rem',
+                        background: 'rgba(255,255,255,0.03)',
+                        padding: '1.25rem',
+                        borderRadius: '12px',
+                        border: '1px solid var(--glass-border)'
                       }}>
-                        <div style={{ fontSize: '1.3rem' }}>🥈</div>
-                        <div style={{ fontSize: '0.75rem', color: '#c0c0c0', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>2º Puesto</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.1rem' }}>{leaderboardPhase1[1]?.points} pts</div>
+                        {/* Campeón */}
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.03))',
+                          border: '1px solid rgba(255, 215, 0, 0.3)',
+                          boxShadow: '0 4px 12px rgba(255, 215, 0, 0.08)'
+                        }}>
+                          <div style={{ fontSize: '1.5rem' }}>👑</div>
+                          <div style={{ fontSize: '0.75rem', color: '#ffd700', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold', marginTop: '0.25rem' }}>Campeón Fase 1</div>
+                          <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
+                          <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', marginTop: '0.1rem', fontWeight: 'bold' }}>{leaderboardPhase1[0]?.points} pts</div>
+                        </div>
+
+                        {/* Subcampeón */}
+                        {leaderboardPhase1.length > 1 && (
+                          <div style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, rgba(192, 192, 192, 0.12), rgba(192, 192, 192, 0.02))',
+                            border: '1px solid rgba(192, 192, 192, 0.25)'
+                          }}>
+                            <div style={{ fontSize: '1.3rem' }}>🥈</div>
+                            <div style={{ fontSize: '0.75rem', color: '#c0c0c0', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>2º Puesto</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[1]?.points} pts</div>
+                          </div>
+                        )}
+
+                        {/* Tercer Puesto */}
+                        {leaderboardPhase1.length > 2 && (
+                          <div style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, rgba(205, 127, 50, 0.1), rgba(205, 127, 50, 0.02))',
+                            border: '1px solid rgba(205, 127, 50, 0.2)'
+                          }}>
+                            <div style={{ fontSize: '1.2rem' }}>🥉</div>
+                            <div style={{ fontSize: '0.75rem', color: '#cd7f32', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>3º Puesto</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[2]?.points} pts</div>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* Tercer Puesto */}
-                    {leaderboardPhase1.length > 2 && (
-                      <div style={{
-                        textAlign: 'center',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        background: 'linear-gradient(135deg, rgba(205, 127, 50, 0.1), rgba(205, 127, 50, 0.02))',
-                        border: '1px solid rgba(205, 127, 50, 0.2)'
-                      }}>
-                        <div style={{ fontSize: '1.2rem' }}>🥉</div>
-                        <div style={{ fontSize: '0.75rem', color: '#cd7f32', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>3º Puesto</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.1rem' }}>{leaderboardPhase1[2]?.points} pts</div>
-                      </div>
-                    )}
-                  </div>
+                    <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+                      <table className="leaderboard-table">
+                        <thead>
+                          <tr>
+                            <th>Pos</th>
+                            <th>Apodo</th>
+                            <th style={{ textAlign: 'center' }}>Exacto</th>
+                            <th style={{ textAlign: 'right' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboardPhase1.map((row, idx) => (
+                            <tr key={row.id} className="leaderboard-row">
+                              <td className="rank-cell">
+                                {idx === 0 ? '👑 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : ''}{idx + 1}º
+                              </td>
+                              <td>
+                                <span
+                                  style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
+                                  title="Haz clic para ver el perfil"
+                                  onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
+                                >
+                                  {row.username}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
+                              <td className="points-cell">{row.points} pts</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
-
-                <div style={{ overflowX: 'auto', marginBottom: '3rem' }}>
-                  <table className="leaderboard-table">
-                    <thead>
-                      <tr>
-                        <th>Pos</th>
-                        <th>Apodo</th>
-                        <th style={{ textAlign: 'center' }}>Exacto</th>
-                        <th style={{ textAlign: 'right' }}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaderboardPhase1.map((row, idx) => (
-                        <tr key={row.id} className="leaderboard-row">
-                          <td className="rank-cell">
-                            {idx === 0 ? '👑 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : ''}{idx + 1}º
-                          </td>
-                          <td>
-                            <span
-                              style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
-                              title="Haz clic para ver el perfil"
-                              onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
-                            >
-                              {row.username}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
-                          <td className="points-cell">{row.points} pts</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* TABLA DE FASE 2 */}
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
-                  🏆 Tabla Fase Final
-                  <span style={{ fontSize: '0.8rem', background: 'gold', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>Fase 2</span>
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                  Standings para la Fase de Eliminación directa (Octavos de Final, Cuartos, Semifinal y Final). Comienza en 0 pts.
-                </p>
-                <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
-                  <table className="leaderboard-table">
-                    <thead>
-                      <tr>
-                        <th>Pos</th>
-                        <th>Apodo</th>
-                        <th style={{ textAlign: 'center' }}>Exacto</th>
-                        <th style={{ textAlign: 'right' }}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaderboardPhase2.map((row, idx) => (
-                        <tr key={row.id} className="leaderboard-row">
-                          <td className="rank-cell">{idx + 1}º</td>
-                          <td>
-                            <span
-                              style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-color)', fontWeight: 600 }}
-                              title="Haz clic para ver el perfil"
-                              onClick={() => setUserProfileModal({ username: row.username, fullName: row.fullName, mysticPhrase: row.mysticPhrase, whatsapp: row.whatsapp })}
-                            >
-                              {row.username}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>{row.exactScores * 7} pts</td>
-                          <td className="points-cell" style={{ color: 'gold', fontWeight: 'bold' }}>{row.points} pts</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
 
                 {/* Cartel de Advertencia de Poderes */}
                 <div style={{ background: 'rgba(255, 77, 77, 0.05)', border: '1px solid rgba(255, 77, 77, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.4', marginTop: '2rem' }}>
