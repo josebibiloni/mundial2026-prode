@@ -756,19 +756,19 @@ function App() {
           if (p.participant_id) {
             const keyId = `${p.tenant_id}_${p.participant_id}`;
             if (!formattedPreds[keyId]) formattedPreds[keyId] = {};
-            formattedPreds[keyId][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
+            formattedPreds[keyId][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b, penalWinner: p.penal_winner };
           }
           // Guardar por username si existe
           if (p.participant_username) {
             const keyUser = `${p.tenant_id}_${(p.participant_username || '').trim()}`;
             if (!formattedPreds[keyUser]) formattedPreds[keyUser] = {};
-            formattedPreds[keyUser][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
+            formattedPreds[keyUser][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b, penalWinner: p.penal_winner };
           }
           // Fallback por si acaso
           if (!p.participant_id && !p.participant_username) {
             const keyUndef = `${p.tenant_id}_undefined`;
             if (!formattedPreds[keyUndef]) formattedPreds[keyUndef] = {};
-            formattedPreds[keyUndef][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b };
+            formattedPreds[keyUndef][p.match_id] = { scoreA: p.score_a, scoreB: p.score_b, penalWinner: p.penal_winner };
           }
         });
         setPredictions(formattedPreds);
@@ -1504,15 +1504,26 @@ function App() {
       return;
     }
 
-    const parsedVal = value === '' ? '' : parseInt(value);
+    const parsedVal = team === 'penalWinner' ? value : (value === '' ? '' : parseInt(value));
     const keyId = `${currentTenant.id}_${currentUser.id}`;
     const keyUsername = `${currentTenant.id}_${(currentUser.username || '').trim()}`;
     const userPreds = predictions[keyId] || predictions[keyUsername] || {};
-    const matchPred = userPreds[matchId] || { scoreA: '', scoreB: '' };
+    const matchPred = userPreds[matchId] || { scoreA: '', scoreB: '', penalWinner: null };
+
+    // Si los goles cambian y ya no es un empate, remover el penalWinner
+    let finalPenalWinner = team === 'penalWinner' ? parsedVal : (matchPred.penalWinner || null);
+    if (team === 'scoreA' || team === 'scoreB') {
+      const nextScoreA = team === 'scoreA' ? parsedVal : matchPred.scoreA;
+      const nextScoreB = team === 'scoreB' ? parsedVal : matchPred.scoreB;
+      if (nextScoreA !== '' && nextScoreB !== '' && nextScoreA !== nextScoreB) {
+        finalPenalWinner = null;
+      }
+    }
 
     const updatedPred = {
       ...matchPred,
-      [team]: parsedVal
+      [team]: parsedVal,
+      penalWinner: finalPenalWinner
     };
 
     // 1. Actualizar el estado local inmediatamente (No bloquea la UI/teclado)
@@ -1536,6 +1547,7 @@ function App() {
         match_id: matchId,
         score_a: team === 'scoreA' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreA === '' ? null : parseInt(matchPred.scoreA)),
         score_b: team === 'scoreB' ? (parsedVal === '' ? null : parseInt(parsedVal)) : (matchPred.scoreB === '' ? null : parseInt(matchPred.scoreB)),
+        penal_winner: finalPenalWinner
       };
 
       // Ejecutar la escritura en segundo plano sin suspender la interfaz
@@ -2960,6 +2972,90 @@ function App() {
                         </div>
 
                       </div>
+
+                      {/* Selector de ganador por penales en caso de empate en Fase 2 (Knockouts) */}
+                      {(currentMatch.stage === 2 || currentMatch.id >= 73) && 
+                       currentUserPrediction?.scoreA !== '' && 
+                       currentUserPrediction?.scoreB !== '' && 
+                       currentUserPrediction?.scoreA !== null && 
+                       currentUserPrediction?.scoreB !== null && 
+                       parseInt(currentUserPrediction.scoreA) === parseInt(currentUserPrediction.scoreB) && (
+                        <div className="animate-fade-in" style={{
+                          marginTop: '1.5rem',
+                          background: 'rgba(255, 215, 0, 0.04)',
+                          border: '1px dashed rgba(255, 215, 0, 0.3)',
+                          padding: '1rem',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.75rem'
+                        }}>
+                          <span style={{ fontSize: '0.85rem', color: '#ffd700', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            ⚖️ Definición por Penales
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            Para avanzar a la siguiente fase, selecciona el equipo que ganará la definición:
+                          </span>
+                          <div style={{ display: 'flex', gap: '1rem', width: '100%', justifyContent: 'center', marginTop: '0.25rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (currentMatch.status !== 'played' && currentMatch.status !== 'live' && !isMatchPredictionsClosed(currentMatch)) {
+                                  handlePredictionChange(currentMatch.id, 'penalWinner', 'A');
+                                }
+                              }}
+                              disabled={currentMatch.status === 'played' || currentMatch.status === 'live' || isMatchPredictionsClosed(currentMatch)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                border: currentUserPrediction.penalWinner === 'A' ? '2px solid #00ff87' : '1px solid var(--glass-border)',
+                                background: currentUserPrediction.penalWinner === 'A' ? 'rgba(0, 255, 135, 0.15)' : 'rgba(255,255,255,0.03)',
+                                color: '#fff',
+                                fontWeight: currentUserPrediction.penalWinner === 'A' ? 'bold' : 'normal',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <span>{currentMatch.flagA}</span>
+                              <span>{currentMatch.teamA}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (currentMatch.status !== 'played' && currentMatch.status !== 'live' && !isMatchPredictionsClosed(currentMatch)) {
+                                  handlePredictionChange(currentMatch.id, 'penalWinner', 'B');
+                                }
+                              }}
+                              disabled={currentMatch.status === 'played' || currentMatch.status === 'live' || isMatchPredictionsClosed(currentMatch)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                border: currentUserPrediction.penalWinner === 'B' ? '2px solid #00ff87' : '1px solid var(--glass-border)',
+                                background: currentUserPrediction.penalWinner === 'B' ? 'rgba(0, 255, 135, 0.15)' : 'rgba(255,255,255,0.03)',
+                                color: '#fff',
+                                fontWeight: currentUserPrediction.penalWinner === 'B' ? 'bold' : 'normal',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <span>{currentMatch.flagB}</span>
+                              <span>{currentMatch.teamB}</span>
+                            </button>
+                          </div>
+                          {(!currentUserPrediction.penalWinner) && (
+                            <span style={{ fontSize: '0.75rem', color: '#ff4d4d', fontWeight: 'bold', marginTop: '0.25rem' }}>
+                              ⚠️ Debes seleccionar un ganador para completar tu pronóstico.
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', width: '100%' }}>
