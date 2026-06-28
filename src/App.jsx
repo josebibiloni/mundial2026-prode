@@ -3009,18 +3009,20 @@ function App() {
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 1rem',
+                                gap: '0.6rem',
+                                padding: '0.6rem 1.2rem',
                                 borderRadius: '8px',
-                                border: currentUserPrediction.penalWinner === 'A' ? '2px solid #00ff87' : '1px solid var(--glass-border)',
-                                background: currentUserPrediction.penalWinner === 'A' ? 'rgba(0, 255, 135, 0.15)' : 'rgba(255,255,255,0.03)',
-                                color: '#fff',
-                                fontWeight: currentUserPrediction.penalWinner === 'A' ? 'bold' : 'normal',
+                                border: currentUserPrediction.penalWinner === 'A' ? '2.5px solid #00b359' : '1px solid rgba(0, 0, 0, 0.25)',
+                                background: currentUserPrediction.penalWinner === 'A' ? 'rgba(0, 255, 135, 0.25)' : 'rgba(0,0,0,0.05)',
+                                color: '#111111',
+                                fontSize: '1rem',
+                                fontWeight: 'bold',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.2s',
+                                boxShadow: currentUserPrediction.penalWinner === 'A' ? '0 0 8px rgba(0, 255, 135, 0.4)' : 'none'
                               }}
                             >
-                              <span>{currentMatch.flagA}</span>
+                              <span style={{ fontSize: '1.2rem' }}>{currentMatch.flagA}</span>
                               <span>{currentMatch.teamA}</span>
                             </button>
                             <button
@@ -3034,18 +3036,20 @@ function App() {
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 1rem',
+                                gap: '0.6rem',
+                                padding: '0.6rem 1.2rem',
                                 borderRadius: '8px',
-                                border: currentUserPrediction.penalWinner === 'B' ? '2px solid #00ff87' : '1px solid var(--glass-border)',
-                                background: currentUserPrediction.penalWinner === 'B' ? 'rgba(0, 255, 135, 0.15)' : 'rgba(255,255,255,0.03)',
-                                color: '#fff',
-                                fontWeight: currentUserPrediction.penalWinner === 'B' ? 'bold' : 'normal',
+                                border: currentUserPrediction.penalWinner === 'B' ? '2px solid #00b359' : '1px solid rgba(0, 0, 0, 0.25)',
+                                background: currentUserPrediction.penalWinner === 'B' ? 'rgba(0, 255, 135, 0.25)' : 'rgba(0,0,0,0.05)',
+                                color: '#111111',
+                                fontSize: '1rem',
+                                fontWeight: 'bold',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.2s',
+                                boxShadow: currentUserPrediction.penalWinner === 'B' ? '0 0 8px rgba(0, 255, 135, 0.4)' : 'none'
                               }}
                             >
-                              <span>{currentMatch.flagB}</span>
+                              <span style={{ fontSize: '1.2rem' }}>{currentMatch.flagB}</span>
                               <span>{currentMatch.teamB}</span>
                             </button>
                           </div>
