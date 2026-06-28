@@ -3012,14 +3012,14 @@ function App() {
                                 gap: '0.6rem',
                                 padding: '0.6rem 1.2rem',
                                 borderRadius: '8px',
-                                border: currentUserPrediction.penalWinner === 'A' ? '2.5px solid #00b359' : '1px solid rgba(0, 0, 0, 0.25)',
-                                background: currentUserPrediction.penalWinner === 'A' ? 'rgba(0, 255, 135, 0.25)' : 'rgba(0,0,0,0.05)',
+                                border: currentUserPrediction?.penalWinner === 'A' ? '2.5px solid #00b359' : '1px solid rgba(0, 0, 0, 0.25)',
+                                background: currentUserPrediction?.penalWinner === 'A' ? 'rgba(0, 255, 135, 0.25)' : 'rgba(0,0,0,0.05)',
                                 color: '#111111',
                                 fontSize: '1rem',
                                 fontWeight: 'bold',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                boxShadow: currentUserPrediction.penalWinner === 'A' ? '0 0 8px rgba(0, 255, 135, 0.4)' : 'none'
+                                boxShadow: currentUserPrediction?.penalWinner === 'A' ? '0 0 8px rgba(0, 255, 135, 0.4)' : 'none'
                               }}
                             >
                               <span style={{ fontSize: '1.2rem' }}>{currentMatch.flagA}</span>
@@ -3039,21 +3039,21 @@ function App() {
                                 gap: '0.6rem',
                                 padding: '0.6rem 1.2rem',
                                 borderRadius: '8px',
-                                border: currentUserPrediction.penalWinner === 'B' ? '2px solid #00b359' : '1px solid rgba(0, 0, 0, 0.25)',
-                                background: currentUserPrediction.penalWinner === 'B' ? 'rgba(0, 255, 135, 0.25)' : 'rgba(0,0,0,0.05)',
+                                border: currentUserPrediction?.penalWinner === 'B' ? '2px solid #00b359' : '1px solid rgba(0, 0, 0, 0.25)',
+                                background: currentUserPrediction?.penalWinner === 'B' ? 'rgba(0, 255, 135, 0.25)' : 'rgba(0,0,0,0.05)',
                                 color: '#111111',
                                 fontSize: '1rem',
                                 fontWeight: 'bold',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                boxShadow: currentUserPrediction.penalWinner === 'B' ? '0 0 8px rgba(0, 255, 135, 0.4)' : 'none'
+                                boxShadow: currentUserPrediction?.penalWinner === 'B' ? '0 0 8px rgba(0, 255, 135, 0.4)' : 'none'
                               }}
                             >
                               <span style={{ fontSize: '1.2rem' }}>{currentMatch.flagB}</span>
                               <span>{currentMatch.teamB}</span>
                             </button>
                           </div>
-                          {(!currentUserPrediction.penalWinner) && (
+                          {(!currentUserPrediction?.penalWinner) && (
                             <span style={{ fontSize: '0.75rem', color: '#ff4d4d', fontWeight: 'bold', marginTop: '0.25rem' }}>
                               ⚠️ Debes seleccionar un ganador para completar tu pronóstico.
                             </span>
