@@ -2975,10 +2975,13 @@ function App() {
 
                       {/* Selector de ganador por penales en caso de empate en Fase 2 (Knockouts) */}
                       {(currentMatch.stage === 2 || currentMatch.id >= 73) && 
-                       currentUserPrediction?.scoreA !== '' && 
-                       currentUserPrediction?.scoreB !== '' && 
-                       currentUserPrediction?.scoreA !== null && 
-                       currentUserPrediction?.scoreB !== null && 
+                       currentUserPrediction && 
+                       currentUserPrediction.scoreA !== '' && 
+                       currentUserPrediction.scoreB !== '' && 
+                       currentUserPrediction.scoreA !== null && 
+                       currentUserPrediction.scoreB !== null && 
+                       currentUserPrediction.scoreA !== undefined && 
+                       currentUserPrediction.scoreB !== undefined && 
                        parseInt(currentUserPrediction.scoreA) === parseInt(currentUserPrediction.scoreB) && (
                         <div className="animate-fade-in" style={{
                           marginTop: '1.5rem',
