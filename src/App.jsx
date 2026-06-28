@@ -3230,8 +3230,8 @@ function App() {
                         }}>
                           <div style={{ fontSize: '1.5rem' }}>👑</div>
                           <div style={{ fontSize: '0.75rem', color: '#ffd700', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold', marginTop: '0.25rem' }}>Campeón Fase 1</div>
-                          <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
-                          <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', marginTop: '0.1rem', fontWeight: 'bold' }}>{leaderboardPhase1[0]?.points} pts</div>
+                          <div style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.1rem', fontWeight: 'bold' }}>{leaderboardPhase1[0]?.points} pts</div>
                         </div>
 
                         {/* Subcampeón */}
@@ -3245,8 +3245,8 @@ function App() {
                           }}>
                             <div style={{ fontSize: '1.3rem' }}>🥈</div>
                             <div style={{ fontSize: '0.75rem', color: '#c0c0c0', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>2º Puesto</div>
-                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
-                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[1]?.points} pts</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[1]?.points} pts</div>
                           </div>
                         )}
 
@@ -3261,8 +3261,8 @@ function App() {
                           }}>
                             <div style={{ fontSize: '1.2rem' }}>🥉</div>
                             <div style={{ fontSize: '0.75rem', color: '#cd7f32', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>3º Puesto</div>
-                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
-                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[2]?.points} pts</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[2]?.points} pts</div>
                           </div>
                         )}
                       </div>
@@ -3415,8 +3415,8 @@ function App() {
                         }}>
                           <div style={{ fontSize: '1.5rem' }}>👑</div>
                           <div style={{ fontSize: '0.75rem', color: '#ffd700', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold', marginTop: '0.25rem' }}>Campeón Fase 1</div>
-                          <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
-                          <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', marginTop: '0.1rem', fontWeight: 'bold' }}>{leaderboardPhase1[0]?.points} pts</div>
+                          <div style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[0]?.username}</div>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.1rem', fontWeight: 'bold' }}>{leaderboardPhase1[0]?.points} pts</div>
                         </div>
 
                         {/* Subcampeón */}
@@ -3430,8 +3430,8 @@ function App() {
                           }}>
                             <div style={{ fontSize: '1.3rem' }}>🥈</div>
                             <div style={{ fontSize: '0.75rem', color: '#c0c0c0', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>2º Puesto</div>
-                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
-                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[1]?.points} pts</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[1]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[1]?.points} pts</div>
                           </div>
                         )}
 
@@ -3446,8 +3446,8 @@ function App() {
                           }}>
                             <div style={{ fontSize: '1.2rem' }}>🥉</div>
                             <div style={{ fontSize: '0.75rem', color: '#cd7f32', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginTop: '0.25rem' }}>3º Puesto</div>
-                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
-                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[2]?.points} pts</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{leaderboardPhase1[2]?.username}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.1rem', fontWeight: '600' }}>{leaderboardPhase1[2]?.points} pts</div>
                           </div>
                         )}
                       </div>
