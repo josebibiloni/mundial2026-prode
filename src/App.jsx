@@ -1195,8 +1195,8 @@ function App() {
   const leaderboardPhase2 = getLeaderboardByStage(2);
   const leaderboardDuels = getLeaderboardDuels();
 
-  // Determinar la tabla de posiciones activa para los castigos visuales (Fase 2 si ya empezó, sino Fase 1)
-  const hasPhase2MatchesPlayed = matches.some(m => (m.stage === 2 || m.id >= 73) && (m.status === 'played' || m.status === 'live'));
+  // Determinar la tabla de posiciones activa para los castigos visuales (Fase 2 si ya empezó y hay partidos jugados con puntajes, sino Fase 1)
+  const hasPhase2MatchesPlayed = matches.some(m => (m.stage === 2 || m.id >= 73) && (m.status === 'played' || m.status === 'live') && m.actualScoreA !== null && m.actualScoreB !== null);
   const leaderboard = hasPhase2MatchesPlayed ? leaderboardPhase2 : leaderboardPhase1;
 
   // Buscar si el usuario actual sufre el castigo (mitad inferior)
@@ -1210,7 +1210,7 @@ function App() {
 
   // Lógica para disparar popup de chicana
   const triggerBanterPopup = (user) => {
-    const board = getLeaderboard();
+    const board = leaderboard;
     const userRankIdx = board.findIndex(p => p.id === user.id);
     const leader = board[0];
 
