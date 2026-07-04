@@ -1500,7 +1500,7 @@ function App() {
     // Validación de fecha límite dinámica
     const targetMatch = matches.find(m => m.id === matchId);
     if (isMatchPredictionsClosed(targetMatch)) {
-      alert('La carga y modificación de pronósticos para este partido finalizó el día anterior a su juego.');
+      alert('La carga y modificación de pronósticos para este partido finalizó 2 horas antes de su comienzo.');
       return;
     }
 
@@ -1804,8 +1804,8 @@ function App() {
   const handleImportUserBackup = (e) => {
     if (!currentUser || !currentTenant) return;
     
-    // VALIDACIÓN DE FECHA LÍMITE GENERAL: Si ya pasó el cierre de Fase 2, todo está cerrado
-    const closingTimePhase2 = new Date('2026-06-28T00:00:00');
+    // VALIDACIÓN DE FECHA LÍMITE GENERAL: Si ya pasó el cierre de la Copa del Mundo en julio, todo está cerrado
+    const closingTimePhase2 = new Date('2026-07-20T00:00:00');
     if (new Date() >= closingTimePhase2) {
       alert('La importación y modificación de todos los pronósticos ha finalizado.');
       return;
