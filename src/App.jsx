@@ -1286,7 +1286,7 @@ function App() {
 
       const loggedUser = {
         id: registeredUser.id,
-        username: registeredUser.username,
+        username: (registeredUser.username || '').trim(),
         fullName: registeredUser.full_name,
         mysticPhrase: registeredUser.mystic_phrase,
         whatsapp: registeredUser.whatsapp,
@@ -1383,7 +1383,7 @@ function App() {
     
     const loggedUser = {
       id: found.id,
-      username: found.username,
+      username: (found.username || '').trim(),
       fullName: found.full_name,
       mysticPhrase: found.mystic_phrase,
       whatsapp: found.whatsapp,
@@ -1448,26 +1448,29 @@ function App() {
         if (error) throw error;
 
         // Si cambiamos el apodo (username), también debemos migrar las predicciones y duelos en la BD
-        if (editNickInput !== currentUser.username) {
+        const oldUsernameClean = (currentUser.username || '').trim();
+        const newUsernameClean = (editNickInput || '').trim();
+        if (newUsernameClean !== oldUsernameClean) {
           try {
+            // Actualizar predicciones buscando coincidencia del username con y sin espacios
             await supabase.from('predictions')
-              .update({ participant_username: editNickInput })
-              .eq('participant_username', currentUser.username)
+              .update({ participant_username: newUsernameClean })
+              .or(`participant_username.eq."${currentUser.username}",participant_username.eq."${oldUsernameClean}"`)
               .eq('tenant_id', currentTenant.id);
 
             await supabase.from('mini_duels')
-              .update({ challenger_username: editNickInput })
-              .eq('challenger_username', currentUser.username)
+              .update({ challenger_username: newUsernameClean })
+              .or(`challenger_username.eq."${currentUser.username}",challenger_username.eq."${oldUsernameClean}"`)
               .eq('tenant_id', currentTenant.id);
 
             await supabase.from('mini_duels')
-              .update({ opponent_username: editNickInput })
-              .eq('opponent_username', currentUser.username)
+              .update({ opponent_username: newUsernameClean })
+              .or(`opponent_username.eq."${currentUser.username}",opponent_username.eq."${oldUsernameClean}"`)
               .eq('tenant_id', currentTenant.id);
 
             await supabase.from('mini_duels')
-              .update({ winner_username: editNickInput })
-              .eq('winner_username', currentUser.username)
+              .update({ winner_username: newUsernameClean })
+              .or(`winner_username.eq."${currentUser.username}",winner_username.eq."${oldUsernameClean}"`)
               .eq('tenant_id', currentTenant.id);
           } catch (migErr) {
             console.error("Error al migrar apodo en cascada:", migErr);
@@ -1476,7 +1479,7 @@ function App() {
 
         const updatedUser = {
           ...currentUser,
-          username: editNickInput,
+          username: editNickInput.trim(),
           mysticPhrase: editMysticInput,
           stripeColor1: editColor1Input,
           stripeColor2: editColor2Input,
