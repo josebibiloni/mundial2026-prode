@@ -1420,7 +1420,7 @@ export const initialMatches = [
     "teamB": "Inglaterra",
     "flagB": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     "group": "Semifinales",
-    "date": "15 Jul 2026 - 20:00",
+    "date": "15 Jul 2026 - 16:00",
     "stadium": "NRG Stadium, Houston",
     "actualScoreA": null,
     "actualScoreB": null,
