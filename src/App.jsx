@@ -2039,13 +2039,20 @@ function App() {
           return (mHome === sHome && mAway === sAway) || (mHome === sAway && mAway === sHome);
         });
 
-        // Si no se encuentra por equipos (ej: fase de eliminación con placeholders como "Ganador Match 74"),
-        // intentamos mapear por ID si el partido no es de fase de grupos en el API
-        const finalMatchMatch = dbMatch || (apiGame.type !== 'group' ? dbMatches.find(m => m.id === parseInt(apiGame.id)) : null);
+        const finalMatchMatch = dbMatch;
 
         if (finalMatchMatch) {
-          const apiScoreA = apiGame.home_score !== null && apiGame.home_score !== 'null' && apiGame.home_score !== undefined ? parseInt(apiGame.home_score) : null;
-          const apiScoreB = apiGame.away_score !== null && apiGame.away_score !== 'null' && apiGame.away_score !== undefined ? parseInt(apiGame.away_score) : null;
+          // Determinar si los equipos de la API vienen invertidos respecto a nuestra base de datos
+          const mHome = finalMatchMatch.team_a.trim().toLowerCase();
+          const sHome = spanishHome.trim().toLowerCase();
+          const isInverted = mHome !== sHome;
+
+          const rawHomeScore = apiGame.home_score !== null && apiGame.home_score !== 'null' && apiGame.home_score !== undefined ? parseInt(apiGame.home_score) : null;
+          const rawAwayScore = apiGame.away_score !== null && apiGame.away_score !== 'null' && apiGame.away_score !== undefined ? parseInt(apiGame.away_score) : null;
+
+          // Asignar el score correcto al equipo A y B correspondientes en nuestra DB
+          const apiScoreA = isInverted ? rawAwayScore : rawHomeScore;
+          const apiScoreB = isInverted ? rawHomeScore : rawAwayScore;
           const apiStatus = apiGame.finished === "TRUE" ? "played" : (apiGame.time_elapsed !== "notstarted" ? "live" : "scheduled");
 
           if (finalMatchMatch.actual_score_a !== apiScoreA || finalMatchMatch.actual_score_b !== apiScoreB || finalMatchMatch.status !== apiStatus) {
